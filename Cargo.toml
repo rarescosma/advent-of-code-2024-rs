@@ -1,0 +1,14 @@
+[workspace]
+resolver = "2"
+members = ["2024"]
+exclude = ["aoc_prelude"]
+
+[workspace.dependencies]
+aoc_2dmap = { path = "aoc_prelude/crates/aoc_2dmap" }
+aoc_prelude = { path = "aoc_prelude/crates/aoc_prelude" }
+aoc_cycles = { path = "aoc_prelude/crates/aoc_cycles" }
+aoc_dijsktra = { path = "aoc_prelude/crates/aoc_dijsktra" }
+
+pest = { version = "2.7.13", default-features = false }
+pest_derive = "2.7.13"
+rayon = "1.10.0"
