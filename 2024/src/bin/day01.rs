@@ -4,20 +4,21 @@ use std::ops::Sub;
 fn read_input() -> (Vec<i32>, Vec<i32>) {
     let mut l1 = Vec::new();
     let mut l2 = Vec::new();
+
     include_str!("../../inputs/01.in").lines().for_each(|line| {
         let mut it = line.split_whitespace();
 
         l1.push(it.next().unwrap().parse().unwrap());
         l2.push(it.next().unwrap().parse().unwrap());
     });
-    l1.sort();
-    l2.sort();
 
     (l1, l2)
 }
 
 fn solve() -> (i32, i32) {
-    let (left, right) = read_input();
+    let (mut left, mut right) = read_input();
+    left.sort();
+    right.sort();
 
     let p1 = left
         .iter()
