@@ -2,7 +2,7 @@ use aoc_prelude::*;
 use regex::{Captures, Regex};
 
 lazy_static! {
-    static ref MUL_REGEX: Regex = Regex::new(r"do\(\)|don't\(\)|mul\((\d+),(\d+)\)").unwrap();
+    static ref INSTR_REGEX: Regex = Regex::new(r"do\(\)|don't\(\)|mul\((\d+),(\d+)\)").unwrap();
 }
 
 enum Instr {
@@ -46,7 +46,7 @@ impl Default for State {
 fn solve() -> (usize, usize) {
     let input = include_str!("../../inputs/03.in");
     let state =
-        MUL_REGEX
+        INSTR_REGEX
             .captures_iter(input)
             .map(Instr::from)
             .fold(State::default(), |acc, instr| match instr {
