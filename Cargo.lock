@@ -41,6 +41,7 @@ dependencies = [
  "pest",
  "pest_derive",
  "rayon",
+ "regex",
 ]
 
 [[package]]
