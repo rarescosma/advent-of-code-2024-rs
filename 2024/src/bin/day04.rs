@@ -1,6 +1,8 @@
 use aoc_2dmap::prelude::*;
 use aoc_prelude::Itertools;
 
+const PAT: [Option<char>; 4] = [Some('S'), Some('S'), Some('M'), Some('M')];
+
 fn solve() -> (usize, usize) {
     let input = include_str!("../../inputs/04.in")
         .lines()
@@ -44,18 +46,17 @@ fn find_p2(map: &Map<char>) -> usize {
                 && pos
                     .neighbors_only_diag()
                     .map(|n| map.get(n))
-                    .collect::<Vec<_>>()
-                    == [Some('S'), Some('S'), Some('M'), Some('M')]
+                    .enumerate()
+                    .all(|(idx, res)| res == PAT[idx])
         })
         .count()
 }
 
 fn rotate_90<T: Clone>(map: &Map<T>) -> Map<T> {
-    let new_tiles = (1..=map.size.x)
-        .flat_map(|col_idx| map.get_col(map.size.x - col_idx))
-        .collect::<Vec<_>>();
-
-    Map::new((map.size.y, map.size.x), new_tiles.into_iter())
+    Map::new(
+        (map.size.y, map.size.x),
+        (1..=map.size.x).flat_map(|col_idx| map.get_col(map.size.x - col_idx)),
+    )
 }
 
 fn rotate_45<T: Clone>(map: &Map<T>, empty: T) -> Map<T> {
