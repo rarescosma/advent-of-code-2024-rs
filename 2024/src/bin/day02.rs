@@ -1,12 +1,14 @@
+use aoc_prelude::Itertools;
+
 fn solve() -> (usize, usize) {
     let input = include_str!("../../inputs/02.in")
         .lines()
         .map(|line| {
             line.split_whitespace()
                 .map(|el| el.parse().unwrap())
-                .collect::<Vec<_>>()
+                .collect_vec()
         })
-        .collect::<Vec<Vec<i32>>>();
+        .collect_vec();
 
     let p1 = input.clone().into_iter().filter(is_valid).count();
 
@@ -27,7 +29,7 @@ fn permute(row: &[i32]) -> impl Iterator<Item = Vec<i32>> + '_ {
 }
 
 fn is_valid(row: &Vec<i32>) -> bool {
-    let rev = row.clone().into_iter().rev().collect::<Vec<_>>();
+    let rev = row.clone().into_iter().rev().collect_vec();
 
     let mut sorted = row.clone();
     sorted.sort();

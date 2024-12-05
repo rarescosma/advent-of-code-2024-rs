@@ -4,9 +4,7 @@ use aoc_prelude::Itertools;
 const PAT: [Option<char>; 4] = [Some('S'), Some('S'), Some('M'), Some('M')];
 
 fn solve() -> (usize, usize) {
-    let input = include_str!("../../inputs/04.in")
-        .lines()
-        .collect::<Vec<_>>();
+    let input = include_str!("../../inputs/04.in").lines().collect_vec();
 
     let mut map = Map::new((input[0].len(), input.len()), input.join("").chars());
 
@@ -67,7 +65,7 @@ fn rotate_45<T: Clone>(map: &Map<T>, empty: T) -> Map<T> {
     for y in 0..map.size.y {
         let mut new_row = diag_iter((0, y).into(), map.size)
             .map(|pos| map.get_unchecked(pos))
-            .collect::<Vec<_>>();
+            .collect_vec();
         new_row.resize(row_size as usize, empty.clone());
         new_rows.push(new_row);
     }
@@ -76,7 +74,7 @@ fn rotate_45<T: Clone>(map: &Map<T>, empty: T) -> Map<T> {
     for x in 1..map.size.x {
         let mut new_row = diag_iter((x, map.size.y - 1).into(), map.size)
             .map(|pos| map.get_unchecked(pos))
-            .collect::<Vec<_>>();
+            .collect_vec();
         new_row.resize(row_size as usize, empty.clone());
         new_rows.push(new_row);
     }
