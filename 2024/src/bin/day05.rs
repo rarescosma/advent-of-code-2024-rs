@@ -27,21 +27,22 @@ fn solve() -> (usize, usize) {
         rep_buf.clear();
         rep_buf.extend(line.split(',').filter_map(|n| n.parse::<usize>().ok()));
 
-        let mut unordered = false;
+        let mut is_valid = true;
 
         rep_buf.sort_by(|&left, &right| {
             if before_set[left][right] {
-                unordered = true;
+                is_valid = false;
                 Ordering::Greater
             } else {
                 Ordering::Less
             }
         });
 
-        if !unordered {
-            p1 += rep_buf[rep_buf.len() / 2]
+        let mid = rep_buf[rep_buf.len() / 2];
+        if is_valid {
+            p1 += mid
         } else {
-            p2 += rep_buf[rep_buf.len() / 2]
+            p2 += mid
         }
     });
 
