@@ -1,7 +1,5 @@
 use std::cmp::Ordering;
 
-type MapType = [[bool; 100]; 100];
-
 fn make_map<const N: usize>() -> [[bool; N]; N] {
     [[false; N]; N]
 }
@@ -29,28 +27,25 @@ fn solve() -> (usize, usize) {
         rep_buf.clear();
         rep_buf.extend(line.split(',').filter_map(|n| n.parse::<usize>().ok()));
 
-        if report_ok(&rep_buf, &before_set) {
+        let mut unordered = false;
+
+        rep_buf.sort_by(|&left, &right| {
+            if before_set[left][right] {
+                unordered = true;
+                Ordering::Greater
+            } else {
+                Ordering::Less
+            }
+        });
+
+        if !unordered {
             p1 += rep_buf[rep_buf.len() / 2]
         } else {
-            rep_buf.sort_by(|&left, &right| {
-                if before_set[left][right] {
-                    Ordering::Greater
-                } else {
-                    Ordering::Less
-                }
-            });
             p2 += rep_buf[rep_buf.len() / 2]
         }
     });
 
     (p1, p2)
-}
-
-fn report_ok(report: &[usize], before_set: &MapType) -> bool {
-    report
-        .iter()
-        .zip(report.iter().skip(1))
-        .all(|(&left, &right)| before_set[left][right])
 }
 
 aoc_2024::main! {
