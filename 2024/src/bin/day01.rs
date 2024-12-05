@@ -17,8 +17,8 @@ fn read_input() -> (Vec<i32>, Vec<i32>) {
 
 fn solve() -> (i32, i32) {
     let (mut left, mut right) = read_input();
-    left.sort();
-    right.sort();
+    left.sort_unstable();
+    right.sort_unstable();
 
     let p1 = left
         .iter()
@@ -26,9 +26,9 @@ fn solve() -> (i32, i32) {
         .fold(0, |acc, e| acc + e.0.sub(e.1).abs());
 
     let mut freq = HashMap::new();
-    right.into_iter().for_each(|e| {
+    for e in right {
         *freq.entry(e).or_insert(0) += 1;
-    });
+    }
 
     let p2 = left
         .iter()

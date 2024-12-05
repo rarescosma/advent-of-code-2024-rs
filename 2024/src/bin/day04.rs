@@ -10,6 +10,7 @@ fn solve() -> (usize, usize) {
 
     let mut p1 = find_p1(&map);
     let mut p2 = find_p2(&map);
+
     for _ in 0..3 {
         map = rotate_90(&map);
         p1 += find_p1(&map);

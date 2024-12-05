@@ -18,11 +18,11 @@ fn main() {
 
     let total_time = (1..=5)
         .filter_map(|day_num| {
-            let cmd = Command::new(dot_dir.join(format!("day{:0>2}", day_num)))
+            let cmd = Command::new(dot_dir.join(format!("day{day_num:0>2}")))
                 .output()
                 .unwrap();
             let output = String::from_utf8(cmd.stdout).unwrap();
-            println!("Day {:0>2}:\n{}", day_num, output);
+            println!("Day {day_num:0>2}:\n{output}");
             extract_microseconds(&output).ok()
         })
         .sum::<usize>();

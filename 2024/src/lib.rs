@@ -5,7 +5,7 @@ use std::ptr;
 use std::str::FromStr;
 
 /// Macro for solution timing
-/// Credits: https://github.com/AxlLind/
+/// Credits: <https://github.com/AxlLind>/
 #[macro_export]
 macro_rules! main {
   ($($body:tt)+) => {

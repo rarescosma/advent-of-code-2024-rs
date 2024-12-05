@@ -15,7 +15,7 @@ fn solve() -> (usize, usize) {
         let (left, right) = line.split_once('|').unwrap();
         let r_num = right.parse::<usize>().unwrap();
         let l_num = left.parse::<usize>().unwrap();
-        before_set[l_num][r_num] = true
+        before_set[l_num][r_num] = true;
     });
 
     let mut p1 = 0;
@@ -40,9 +40,9 @@ fn solve() -> (usize, usize) {
 
         let mid = rep_buf[rep_buf.len() / 2];
         if is_valid {
-            p1 += mid
+            p1 += mid;
         } else {
-            p2 += mid
+            p2 += mid;
         }
     });
 
