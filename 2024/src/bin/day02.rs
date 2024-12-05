@@ -32,7 +32,7 @@ fn is_valid(row: &Vec<i32>) -> bool {
     let rev = row.clone().into_iter().rev().collect_vec();
 
     let mut sorted = row.clone();
-    sorted.sort();
+    sorted.sort_unstable();
 
     sorted
         .iter()

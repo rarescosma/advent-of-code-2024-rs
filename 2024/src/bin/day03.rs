@@ -62,7 +62,7 @@ fn solve() -> (usize, usize) {
                     let res = a * b;
                     State {
                         p1: acc.p1 + res,
-                        p2: acc.p2 + res * (acc.enabled as usize),
+                        p2: acc.p2 + res * usize::from(acc.enabled),
                         enabled: acc.enabled,
                     }
                 }
