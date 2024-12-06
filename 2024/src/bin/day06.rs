@@ -57,25 +57,22 @@ fn solve() -> (usize, usize) {
 
     let mut p2 = 0;
     for hash in buffers
-        .states
+        .visited_pos
         .clone()
         .iter()
         .enumerate()
         .filter(|x| *x.1)
         .map(|x| x.0)
     {
-        let (rest, dir) = hash.div_rem(&4);
-        let (x, y) = rest.div_rem(&(map.size.y as usize));
+        let (x, y) = hash.div_rem(&(map.size.y as usize));
 
-        let blockage = Pos::from((x, y));
-        for cand in [blockage, blockage + DXY[dir]] {
-            if map.get(cand) == Some('.') {
-                map.set(cand, '#');
-                if has_cycle(&map, start, &mut buffers) {
-                    p2 += 1;
-                }
-                map.set(cand, 'b');
+        let cand = Pos::from((x, y));
+        if map.get(cand) == Some('.') {
+            map.set(cand, '#');
+            if has_cycle(&map, start, &mut buffers) {
+                p2 += 1;
             }
+            map.set(cand, 'b');
         }
     }
 
