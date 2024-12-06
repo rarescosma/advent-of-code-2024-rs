@@ -52,7 +52,8 @@ fn solve() -> (usize, usize) {
     }
 
     let mut buffers = Buffers::allocate(map.size);
-    let (p1, _) = sim_map(&map, start, 0, &mut buffers);
+    has_cycle(&map, start, &mut buffers);
+    let p1 = buffers.visited_pos.iter().filter(|&x| *x).count();
 
     let mut p2 = 0;
     for hash in buffers
@@ -70,11 +71,10 @@ fn solve() -> (usize, usize) {
         for cand in [blockage, blockage + DXY[dir]] {
             if map.get(cand) == Some('.') {
                 map.set(cand, '#');
-                let (_, has_cycle) = sim_map(&map, start, 0, &mut buffers);
-                map.set(cand, 'b');
-                if has_cycle {
+                if has_cycle(&map, start, &mut buffers) {
                     p2 += 1;
                 }
+                map.set(cand, 'b');
             }
         }
     }
@@ -82,33 +82,32 @@ fn solve() -> (usize, usize) {
     (p1, p2)
 }
 
-fn sim_map(map: &Map<char>, start: Pos, start_dir: usize, buffers: &mut Buffers) -> (usize, bool) {
+fn has_cycle(map: &Map<char>, start: Pos, buffers: &mut Buffers) -> bool {
     let mut cur = start;
-    let mut dxy_idx = start_dir;
+    let mut dir = 0;
     buffers.clear();
     buffers.visited_pos[(start.x * map.size.y + start.y) as usize] = true;
 
     loop {
-        cur += DXY[dxy_idx];
-        match map.get(cur) {
-            None => return (buffers.visited_pos.iter().filter(|&x| *x).count(), false),
-            Some(c) => {
-                let hash = ((cur.x * map.size.y + cur.y) * 4) as usize + dxy_idx;
-                if c == '#' {
-                    // backtrack + turn right
-                    let opposite = DXY[turn_back(dxy_idx)];
-                    cur += opposite;
-                    dxy_idx = turn_right(dxy_idx);
-                } else {
-                    // cycle detected
-                    if buffers.states[hash] {
-                        return (0, true);
-                    }
-                }
-                buffers.states[hash] = true;
-                buffers.visited_pos[(cur.x * map.size.y + cur.y) as usize] = true;
+        cur += DXY[dir];
+        if cur.x < 0 || cur.y < 0 || cur.x == map.size.x || cur.y == map.size.y {
+            return false;
+        }
+        let c = map.get_unchecked(cur);
+        let hash = ((cur.x * map.size.y + cur.y) * 4) as usize + dir;
+        if c == '#' {
+            // backtrack + turn right
+            let opposite = DXY[turn_back(dir)];
+            cur += opposite;
+            dir = turn_right(dir);
+        } else {
+            // cycle detected
+            if buffers.states[hash] {
+                return true;
             }
         }
+        buffers.states[hash] = true;
+        buffers.visited_pos[(cur.x * map.size.y + cur.y) as usize] = true;
     }
 }
 
