@@ -1,37 +1,21 @@
 use aoc_prelude::num_integer::Integer;
 
 type Int = u64;
-type Base = u8;
-const TEN: Int = 10;
+type Op = u8;
 
-#[derive(Copy, Clone, Debug)]
-enum Ops {
-    Add,
-    Mul,
-    Concat,
-}
+const ADD: Op = 0;
+const MUL: Op = 1;
+const CAT: Op = 2;
 
-impl From<Base> for Ops {
-    fn from(value: Base) -> Self {
-        match value {
-            0 => Self::Add,
-            1 => Self::Mul,
-            2 => Self::Concat,
-            _ => unreachable!(),
+fn can_proceed(op: Op, exp: Int, operand: Int) -> Option<Int> {
+    match op {
+        ADD => (exp >= operand).then(|| exp - operand),
+        MUL => (exp % operand == 0).then(|| exp / operand),
+        CAT => {
+            let (d, r) = (exp - operand).div_rem(&grade(operand));
+            (r == 0).then_some(d)
         }
-    }
-}
-
-impl Ops {
-    fn can_proceed(self, exp: Int, operand: Int) -> Option<Int> {
-        match self {
-            Ops::Add => (exp >= operand).then(|| exp - operand),
-            Ops::Mul => (exp % operand == 0).then(|| exp / operand),
-            Ops::Concat => {
-                let (d, r) = (exp - operand).div_rem(&TEN.pow(grade(operand)));
-                (r == 0).then_some(d)
-            }
-        }
+        _ => unreachable!(),
     }
 }
 
@@ -50,11 +34,10 @@ fn solve() -> (Int, Int) {
                 .filter_map(|el| el.parse::<Int>().ok()),
         );
 
-        if check::<2>(expected, &operands) {
+        if check::<MUL>(expected, &operands) {
             p1 += expected;
-        }
-
-        if check::<3>(expected, &operands) {
+            p2 += expected
+        } else if check::<CAT>(expected, &operands) {
             p2 += expected;
         }
     });
@@ -63,25 +46,26 @@ fn solve() -> (Int, Int) {
 }
 
 #[inline(never)]
-fn check<const B: Base>(expected: Int, operands: &[Int]) -> bool {
+fn check<const O: Op>(expected: Int, operands: &[Int]) -> bool {
     match operands {
         [] => false,
         [last] => expected == *last,
-        [rest @ .., last] => (0..B).map(Ops::from).any(|op| {
-            op.can_proceed(expected, *last)
-                .is_some_and(|prev_expected| check::<B>(prev_expected, rest))
+        [rest @ .., last] => (0..=O).any(|op| {
+            can_proceed(op, expected, *last)
+                .is_some_and(|prev_expected| check::<O>(prev_expected, rest))
         }),
     }
 }
 
-fn grade(what: Int) -> u32 {
-    let mut sr = what;
-    let mut ans = 1;
-    while sr >= 10 {
-        ans += 1;
-        sr /= 10;
+#[inline]
+fn grade(what: Int) -> Int {
+    if what < 10 {
+        10
+    } else if what < 100 {
+        100
+    } else {
+        1000
     }
-    ans
 }
 
 aoc_2024::main! {
