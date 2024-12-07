@@ -46,15 +46,15 @@ fn solve() -> (Int, Int) {
         let expected = first.parse::<Int>().unwrap();
         operands.clear();
         operands.extend(
-            rest.split_whitespace()
+            rest.split_ascii_whitespace()
                 .filter_map(|el| el.parse::<Int>().ok()),
         );
 
-        if op_loop_cons::<2>(expected, &operands) {
+        if check::<2>(expected, &operands) {
             p1 += expected;
         }
 
-        if op_loop_cons::<3>(expected, &operands) {
+        if check::<3>(expected, &operands) {
             p2 += expected;
         }
     });
@@ -62,13 +62,14 @@ fn solve() -> (Int, Int) {
     (p1, p2)
 }
 
-fn op_loop_cons<const B: Base>(expected: Int, operands: &[Int]) -> bool {
+#[inline(never)]
+fn check<const B: Base>(expected: Int, operands: &[Int]) -> bool {
     match operands {
         [] => false,
         [last] => expected == *last,
         [rest @ .., last] => (0..B).map(Ops::from).any(|op| {
             op.can_proceed(expected, *last)
-                .is_some_and(|prev_expected| op_loop_cons::<B>(prev_expected, rest))
+                .is_some_and(|prev_expected| check::<B>(prev_expected, rest))
         }),
     }
 }
