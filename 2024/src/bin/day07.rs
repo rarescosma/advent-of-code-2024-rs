@@ -1,4 +1,9 @@
+use aoc_prelude::num_integer::Integer;
 use aoc_prelude::Itertools;
+
+type Int = u64;
+type Base = u8;
+const TEN: Int = 10;
 
 #[derive(Copy, Clone, Debug)]
 enum Ops {
@@ -7,8 +12,8 @@ enum Ops {
     Concat,
 }
 
-impl From<u32> for Ops {
-    fn from(value: u32) -> Self {
+impl From<Base> for Ops {
+    fn from(value: Base) -> Self {
         match value {
             0 => Self::Add,
             1 => Self::Mul,
@@ -18,32 +23,29 @@ impl From<u32> for Ops {
     }
 }
 
-fn ops_iter<const B: u32>(ops: u32, operands_len: usize) -> impl Iterator<Item = Ops> {
-    let mut sr = ops;
-
-    (0..operands_len - 1).map(move |_| {
-        if B == 2 {
-            let op = sr & 0b1;
-            sr >>= 1;
-            op.into()
-        } else {
-            let op = sr % B;
-            sr /= B;
-            op.into()
+impl Ops {
+    fn can_proceed(self, exp: Int, operand: Int) -> Option<Int> {
+        match self {
+            Ops::Add => (exp >= operand).then(|| exp - operand),
+            Ops::Mul => (exp % operand == 0).then(|| exp / operand),
+            Ops::Concat => {
+                let (d, r) = (exp - operand).div_rem(&TEN.pow(grade(operand)));
+                (r == 0).then_some(d)
+            }
         }
-    })
+    }
 }
 
-fn solve() -> (u128, u128) {
+fn solve() -> (Int, Int) {
     let mut results = Vec::new();
     let mut operands = Vec::new();
 
     include_str!("../../inputs/07.in").lines().for_each(|line| {
         let (first, rest) = line.split_once(":").unwrap();
-        results.push(first.parse::<u128>().unwrap());
+        results.push(first.parse::<Int>().unwrap());
         operands.push(
             rest.split_whitespace()
-                .filter_map(|el| el.parse::<u128>().ok())
+                .filter_map(|el| el.parse::<Int>().ok())
                 .collect_vec(),
         )
     });
@@ -52,7 +54,7 @@ fn solve() -> (u128, u128) {
         .iter()
         .enumerate()
         .filter_map(|(idx, &exp)| {
-            if op_loop::<2>(exp, &operands[idx]) {
+            if op_loop_cons::<2>(exp, &operands[idx]) {
                 Some(exp)
             } else {
                 None
@@ -64,7 +66,7 @@ fn solve() -> (u128, u128) {
         .into_iter()
         .enumerate()
         .filter_map(|(idx, exp)| {
-            if op_loop::<3>(exp, &operands[idx]) {
+            if op_loop_cons::<3>(exp, &operands[idx]) {
                 Some(exp)
             } else {
                 None
@@ -75,28 +77,18 @@ fn solve() -> (u128, u128) {
     (p1, p2)
 }
 
-fn op_loop<const B: u32>(expected: u128, operands: &[u128]) -> bool {
-    for ops in 0..=((B.pow(operands.len() as u32 - 1)) - 1) {
-        if op_test::<B>(operands, ops) == expected {
-            return true;
-        }
+fn op_loop_cons<const B: Base>(expected: Int, operands: &[Int]) -> bool {
+    match operands {
+        [] => false,
+        [last] => expected == *last,
+        [rest @ .., last] => (0..B).map(Ops::from).any(|op| {
+            op.can_proceed(expected, *last)
+                .is_some_and(|prev_expected| op_loop_cons::<B>(prev_expected, rest))
+        }),
     }
-    false
 }
 
-fn op_test<const B: u32>(operands: &[u128], ops: u32) -> u128 {
-    let mut res = operands[0];
-    for (idx, op) in ops_iter::<B>(ops, operands.len()).enumerate() {
-        match op {
-            Ops::Add => res += operands[idx + 1],
-            Ops::Mul => res *= operands[idx + 1],
-            Ops::Concat => res = res * 10u128.pow(grade(operands[idx + 1])) + operands[idx + 1],
-        }
-    }
-    res
-}
-
-fn grade(what: u128) -> u32 {
+fn grade(what: Int) -> u32 {
     let mut sr = what;
     let mut ans = 1;
     while sr >= 10 {
