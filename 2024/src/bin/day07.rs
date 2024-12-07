@@ -1,5 +1,4 @@
 use aoc_prelude::num_integer::Integer;
-use aoc_prelude::Itertools;
 
 type Int = u64;
 type Base = u8;
@@ -37,42 +36,28 @@ impl Ops {
 }
 
 fn solve() -> (Int, Int) {
-    let mut results = Vec::new();
-    let mut operands = Vec::new();
+    let mut operands = Vec::with_capacity(20);
+
+    let mut p1 = 0;
+    let mut p2 = 0;
 
     include_str!("../../inputs/07.in").lines().for_each(|line| {
         let (first, rest) = line.split_once(":").unwrap();
-        results.push(first.parse::<Int>().unwrap());
-        operands.push(
+        let expected = first.parse::<Int>().unwrap();
+        operands.clear();
+        operands.extend(
             rest.split_whitespace()
-                .filter_map(|el| el.parse::<Int>().ok())
-                .collect_vec(),
-        )
+                .filter_map(|el| el.parse::<Int>().ok()),
+        );
+
+        if op_loop_cons::<2>(expected, &operands) {
+            p1 += expected;
+        }
+
+        if op_loop_cons::<3>(expected, &operands) {
+            p2 += expected;
+        }
     });
-
-    let p1 = results
-        .iter()
-        .enumerate()
-        .filter_map(|(idx, &exp)| {
-            if op_loop_cons::<2>(exp, &operands[idx]) {
-                Some(exp)
-            } else {
-                None
-            }
-        })
-        .sum();
-
-    let p2 = results
-        .into_iter()
-        .enumerate()
-        .filter_map(|(idx, exp)| {
-            if op_loop_cons::<3>(exp, &operands[idx]) {
-                Some(exp)
-            } else {
-                None
-            }
-        })
-        .sum();
 
     (p1, p2)
 }
