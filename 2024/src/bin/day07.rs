@@ -7,18 +7,6 @@ const ADD: Op = 0;
 const MUL: Op = 1;
 const CAT: Op = 2;
 
-fn can_proceed(op: Op, exp: Int, operand: Int) -> Option<Int> {
-    match op {
-        ADD => (exp >= operand).then(|| exp - operand),
-        MUL => (exp % operand == 0).then(|| exp / operand),
-        CAT => {
-            let (d, r) = (exp - operand).div_rem(&grade(operand));
-            (r == 0).then_some(d)
-        }
-        _ => unreachable!(),
-    }
-}
-
 fn solve() -> (Int, Int) {
     let mut operands = Vec::with_capacity(20);
 
@@ -54,6 +42,18 @@ fn check<const O: Op>(expected: Int, operands: &[Int]) -> bool {
             can_proceed(op, expected, *last)
                 .is_some_and(|prev_expected| check::<O>(prev_expected, rest))
         }),
+    }
+}
+
+fn can_proceed(op: Op, exp: Int, operand: Int) -> Option<Int> {
+    match op {
+        ADD => (exp >= operand).then(|| exp - operand),
+        MUL => (exp % operand == 0).then(|| exp / operand),
+        CAT => {
+            let (d, r) = (exp - operand).div_rem(&grade(operand));
+            (r == 0).then_some(d)
+        }
+        _ => unreachable!(),
     }
 }
 
