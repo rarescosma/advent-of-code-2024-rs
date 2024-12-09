@@ -1,4 +1,5 @@
-use std::cmp::max;
+use std::cmp::{max, Reverse};
+use std::collections::BinaryHeap;
 
 #[derive(Debug, Copy, Clone)]
 struct Fext {
@@ -31,6 +32,7 @@ impl Ext {
 fn solve_struct() -> (usize, usize) {
     let mut exts = Vec::new();
     let mut start = 0;
+    let mut spaces = vec![BinaryHeap::new(); 10];
     include_str!("../../inputs/09.in")
         .trim()
         .chars()
@@ -48,6 +50,7 @@ fn solve_struct() -> (usize, usize) {
                 });
                 start += size;
             } else {
+                spaces[size].push(Reverse(idx));
                 exts.push(Ext {
                     files: Vec::new(),
                     start,
@@ -103,32 +106,39 @@ fn solve_struct() -> (usize, usize) {
 
     // p2 - reset
     exts = p2_exts;
-    j = exts.len() - 1;
+    let exts_len = exts.len();
 
     let mut max_move = usize::MAX;
+    (0..exts_len / 2).for_each(|cnt| {
+        let j = exts_len - cnt * 2 - 1;
 
-    while j > 1 {
         let tail_file = exts[j].files[0];
-        let mut could_move = false;
+
         // optimization: if we couldn't move size X, ignore all sizes >X
-        if tail_file.size < max_move {
-            for i in 0..j / 2 {
-                let idx = 2 * i + 1;
-                if exts[idx].free >= exts[j].files[0].size {
-                    // the whole file fits => move it
-                    exts[idx].files.push(tail_file);
-                    exts[idx].free -= tail_file.size;
-                    exts[j].files = Vec::new();
-                    could_move = true;
-                    break;
-                }
-            }
-            if !could_move {
-                max_move = tail_file.size;
-            }
+        if tail_file.size >= max_move {
+            return;
         }
-        j -= 2;
-    }
+
+        if let Some(Reverse(idx)) = (tail_file.size..10)
+            .filter_map(|bucket| {
+                spaces[bucket]
+                    .peek()
+                    .take_if(|x| x.0 <= j)
+                    .map(|x| (bucket, x.0))
+            })
+            .min_by(|(_, idx1), (_, idx2)| idx1.cmp(idx2))
+            .and_then(|(bucket, _)| spaces[bucket].pop())
+        {
+            exts[idx].files.push(tail_file);
+            exts[idx].free -= tail_file.size;
+            if exts[idx].free > 0 {
+                spaces[exts[idx].free].push(Reverse(idx));
+            }
+            exts[j].files.clear();
+        } else {
+            max_move = tail_file.size;
+        }
+    });
 
     let p2: usize = exts
         .iter()
