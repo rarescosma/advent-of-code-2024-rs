@@ -1,3 +1,10 @@
+//! # Ceres Search
+//!
+//! Part 1: we only implement searching in the left direction, but accumulate
+//! the counts for all 8 rotations of the map (45 and 90 degrees increments).
+//!
+//! Part 2: check for the diagonal neighbors of an `A` to match the [`PAT`].
+//! Then do the same for the other three 90 degrees rotations.
 use aoc_2dmap::prelude::*;
 use aoc_prelude::Itertools;
 

@@ -1,3 +1,13 @@
+//! # Guard Gallivant
+//!
+//! Brute-force, unfortunately. Could be sped up by pre-computing a "jump table" so we teleport
+//! the guard when hitting an obstacle instead of incrementing its position 1 by 1.
+//!
+//! Part 2: the big win is only trying to put obstacles in the positions walked by the guard
+//! during part 1.
+//!
+//! Gotcha for part 2: when using a Vec as boolean array, you gotta `.fill(false)` instead of
+//! `.clear()` it.
 use aoc_2dmap::prelude::*;
 use aoc_prelude::num_integer::Integer;
 use aoc_prelude::Itertools;

@@ -1,3 +1,10 @@
+//! # Historian Hysteria
+//!
+//! Part 1: Pairing up numbers from the left/right lists in increasing order
+//! and accumulating the differences.
+//!
+//! Part 2: How often does each number from the left list appear in the right
+//! list? Accumulate the frequencies.
 use aoc_prelude::HashMap;
 use std::ops::Sub;
 

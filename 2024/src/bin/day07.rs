@@ -1,3 +1,9 @@
+//! # Bridge Repair
+//!
+//! Work in reverse order from the end of the equation to prune as many states
+//! as possible by checking which operations are possible and reversing the operation.
+//!
+//! Bonus points for using fancy match patterns in the `check()` function.
 use aoc_prelude::num_integer::Integer;
 
 type Int = u64;
