@@ -1,3 +1,15 @@
+//! # Disk Fragmenter
+//!
+//! Part 1: break the the tail file into chunks if it can't fit into the current
+//! empty extent.
+//!
+//! Part 2: Since free space blocks can only have size 1..9, keep a list of nine
+//! `BinaryHeap`s containing the extent indexes (in reversed order). To place a file
+//! iterate through all binary heaps that can fit it (`file_size..=0`) and select the
+//! extent with the minimum index.
+//!
+//! Gotcha was to stop moving files if the destination index is higher than the file
+//! index.
 use std::cmp::{max, Reverse};
 use std::collections::BinaryHeap;
 

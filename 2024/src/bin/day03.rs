@@ -1,3 +1,9 @@
+//! # Mull It Over
+//!
+//! Solves both parts simultaneously using
+//! [regex](https://en.wikipedia.org/wiki/Regular_expression).
+//!
+//! Uses a state machine to tell if we're actively computing for Part 2.
 use aoc_prelude::*;
 use regex::{Captures, Regex};
 

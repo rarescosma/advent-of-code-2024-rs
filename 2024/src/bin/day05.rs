@@ -1,3 +1,9 @@
+//! # Print Queue
+//!
+//! The input is constructed so that each possible pair that occurs in a row has a defined
+//! precedence that enables sorting with a custom `.sort_by` closure. Numbers are always
+//! 2 digits so storing the `before_set` in a fixed size 100 x 100 array is faster than
+//! using a `HashMap`.
 use std::cmp::Ordering;
 
 fn make_map<const N: usize>() -> [[bool; N]; N] {

@@ -1,3 +1,10 @@
+//! # Red-Nosed Reports
+//!
+//! Part 1: check if adjacent level are all-increasing or all-decreasing and
+//! that the delta is at least 1 and at most 3.
+//!
+//! Part 2: we can make a level safe by removing _at most_ one element.
+//! Figure out which additional levels become safe.
 use aoc_prelude::Itertools;
 
 fn solve() -> (usize, usize) {

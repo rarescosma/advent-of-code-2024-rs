@@ -1,3 +1,7 @@
+//! # Resonant Collinearity
+//!
+//! Brute force all the way, but fast enough for a Sunday problem, especially
+//! after switching to boolean arrays instead of our fancy `Map`.
 use aoc_2dmap::prelude::*;
 use aoc_prelude::{BTreeMap, Itertools};
 
