@@ -29,10 +29,11 @@ impl Ext {
     }
 }
 
-fn solve_struct() -> (usize, usize) {
-    let mut exts = Vec::new();
+fn solve() -> (usize, usize) {
+    let mut p1_exts = Vec::with_capacity(10000);
     let mut start = 0;
     let mut spaces = vec![BinaryHeap::new(); 10];
+
     include_str!("../../inputs/09.in")
         .trim()
         .chars()
@@ -40,7 +41,7 @@ fn solve_struct() -> (usize, usize) {
         .for_each(|(idx, c)| {
             let size = ((c as u8) - b'0') as usize;
             if is_file(idx) {
-                exts.push(Ext {
+                p1_exts.push(Ext {
                     files: vec![Fext {
                         file_no: idx / 2,
                         size,
@@ -51,7 +52,7 @@ fn solve_struct() -> (usize, usize) {
                 start += size;
             } else {
                 spaces[size].push(Reverse(idx));
-                exts.push(Ext {
+                p1_exts.push(Ext {
                     files: Vec::new(),
                     start,
                     free: size,
@@ -59,11 +60,17 @@ fn solve_struct() -> (usize, usize) {
                 start += size;
             }
         });
+    let mut p2_exts = p1_exts.clone();
 
+    part1(&mut p1_exts);
+    part2(&mut p2_exts, &mut spaces);
+
+    (checksum(&p1_exts), checksum(&p2_exts))
+}
+
+fn part1(exts: &mut [Ext]) {
     let mut i = 0;
     let mut j = exts.len() - 1;
-
-    let p2_exts = exts.clone();
 
     'outer: while i <= j {
         // it's a file
@@ -98,14 +105,9 @@ fn solve_struct() -> (usize, usize) {
         }
         i += 1;
     }
-    let p1: usize = exts
-        .iter()
-        .filter(|ext| !ext.files.is_empty())
-        .map(|e| e.checksum())
-        .sum();
+}
 
-    // p2 - reset
-    exts = p2_exts;
+fn part2(exts: &mut [Ext], spaces: &mut [BinaryHeap<Reverse<usize>>]) {
     let exts_len = exts.len();
 
     let mut max_move = usize::MAX;
@@ -139,14 +141,13 @@ fn solve_struct() -> (usize, usize) {
             max_move = tail_file.size;
         }
     });
+}
 
-    let p2: usize = exts
-        .iter()
+fn checksum(exts: &[Ext]) -> usize {
+    exts.iter()
         .filter(|ext| !ext.files.is_empty())
         .map(|e| e.checksum())
-        .sum();
-
-    (p1, p2)
+        .sum()
 }
 
 fn block_sum(start_block: usize, end_block: usize) -> usize {
@@ -158,5 +159,5 @@ fn is_file(cursor: usize) -> bool {
 }
 
 aoc_2024::main! {
-    solve_struct()
+    solve()
 }
