@@ -16,8 +16,8 @@ impl Buf {
     fn sized<const N: usize>() -> Self {
         Self {
             seen: vec![false; N],
-            ends: HashSet::with_capacity(64),
-            queue: VecDeque::with_capacity(128),
+            ends: HashSet::with_capacity(16),
+            queue: VecDeque::with_capacity(64),
         }
     }
 
