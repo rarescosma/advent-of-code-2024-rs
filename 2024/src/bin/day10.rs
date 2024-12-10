@@ -62,7 +62,7 @@ fn dfs(start: Pos, map: &Map<u8>, buf: &mut Buf) -> (usize, usize) {
             continue;
         }
 
-        let neighs = cur.neighbors_simple().filter_map(|n| {
+        buf.queue.extend(cur.neighbors_simple().filter_map(|n| {
             map.get(n).and_then(|val| {
                 let n_idx = (n.y * map.size.x + n.x) as usize;
                 if val == cur_val + 1 && !buf.seen[n_idx] {
@@ -71,8 +71,7 @@ fn dfs(start: Pos, map: &Map<u8>, buf: &mut Buf) -> (usize, usize) {
                     None
                 }
             })
-        });
-        buf.queue.extend(neighs);
+        }));
     }
 
     (buf.ends.len(), res)
