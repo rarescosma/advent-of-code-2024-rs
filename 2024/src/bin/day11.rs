@@ -22,9 +22,9 @@ const TENS: [Int; 10] = [
 
 fn solve() -> (Int, Int) {
     let mut tally: HashMap<Int, Int> = include_str!("../../inputs/11.in")
-        .trim()
         .split_ascii_whitespace()
-        .filter_map(|el| el.parse::<Int>().ok().map(|key| (key, 1)))
+        .flat_map(str::parse::<Int>)
+        .map(|key| (key, 1))
         .collect();
 
     let mut changes = ArrayVec::<(Int, Int), 16384>::new();
@@ -43,7 +43,7 @@ fn solve() -> (Int, Int) {
 }
 
 fn num_digits(num: Int) -> u32 {
-    num.checked_ilog10().unwrap_or(0) + 1
+    num.ilog10() + 1
 }
 
 fn split(num: Int) -> Option<(Int, Int)> {
@@ -73,8 +73,8 @@ fn epoch(tally: &mut HashMap<Int, Int>, changes: &mut ArrayVec<(Int, Int), 16384
         }
     }
 
-    for (k, delta) in changes {
-        *tally.entry(*k).or_insert(0) += *delta;
+    for (key, delta) in changes {
+        *tally.entry(*key).or_insert(0) += *delta;
     }
 }
 
