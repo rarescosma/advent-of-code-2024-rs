@@ -7,9 +7,17 @@ use aoc_prelude::num_integer::Integer;
 use aoc_prelude::{ArrayVec, HashMap};
 
 type Int = i64;
-// const TEN: Int = 10i64;
 const TENS: [Int; 10] = [
-    1, 10, 100, 1000, 10000, 100000, 1000000, 10000000, 100000000, 1000000000,
+    1,
+    10,
+    100,
+    1_000,
+    10_000,
+    100_000,
+    1_000_000,
+    10_000_000,
+    100_000_000,
+    1_000_000_000,
 ];
 
 fn solve() -> (Int, Int) {
