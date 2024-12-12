@@ -16,9 +16,12 @@
 //!   parent region
 
 use aoc_2dmap::prelude::{Map, Pos};
-use aoc_prelude::{HashMap, HashSet, Itertools};
+use aoc_prelude::{HashSet, Itertools};
 use rayon::prelude::*;
-use std::collections::VecDeque;
+use std::collections::{BTreeSet, VecDeque};
+use std::fmt::{Display, Formatter, Write};
+
+type Region = BTreeSet<Pos>;
 
 type Dir = u8;
 
@@ -81,6 +84,12 @@ impl Tile {
     }
 }
 
+impl Display for Tile {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        f.write_char(self.ch)
+    }
+}
+
 struct Explorer<'a> {
     pos: Pos,
     dir: Dir,
@@ -89,13 +98,12 @@ struct Explorer<'a> {
 }
 
 impl<'a> Explorer<'a> {
-    fn new(map: &'a Map<Tile>, positions: impl Iterator<Item = &'a Pos>) -> Self {
-        let pos = leftmost(map, positions);
+    fn new(map: &'a Map<Tile>, start_pos: Pos) -> Self {
         Self {
-            pos,
+            pos: start_pos,
             dir: DOWN,
             map,
-            initial: (pos, DOWN),
+            initial: (start_pos, DOWN),
         }
     }
 
@@ -139,22 +147,14 @@ fn solve() -> (usize, usize) {
         input.join("").chars().map(Tile::from),
     );
 
-    let mut regions = Vec::new();
+    let regions = assign_regions(&mut map);
 
-    let num_regions = assign_regions(&mut map, |region_id, pos| {
-        if regions.len() <= region_id {
-            regions.push(HashSet::new());
-        }
-        regions[region_id].insert(pos);
-    });
-
-    let (p1, p2) = (0..num_regions)
+    let (p1, p2) = regions
         .into_par_iter()
-        .map(|region_id| {
-            let positions = &regions[region_id];
-            let (area, perimeter) = area_and_perimeter(&map, positions.iter());
-            let sides = Explorer::new(&map, positions.iter()).sides();
-            let inner_sides = inner_sides(&map, positions);
+        .map(|region| {
+            let (area, perimeter) = area_and_perimeter(&map, &region);
+            let sides = Explorer::new(&map, *region.iter().next().expect("empty region")).sides();
+            let inner_sides = inner_sides(&map, &region);
             (perimeter * area, (sides + inner_sides) * area)
         })
         .reduce(|| (0, 0), |acc, val| (acc.0 + val.0, acc.1 + val.1));
@@ -162,53 +162,44 @@ fn solve() -> (usize, usize) {
     (p1, p2)
 }
 
-fn assign_regions<F>(map: &mut Map<Tile>, mut cache_builder: F) -> usize
-where
-    F: FnMut(usize, Pos),
-{
-    let map_copy = map.clone();
-
-    let to_visit: Vec<_> = map.iter().collect();
-    let mut to_set = vec![true; to_visit.len()];
+fn assign_regions(map: &mut Map<Tile>) -> Vec<Region> {
+    let mut seen = HashSet::new();
     let mut q = VecDeque::new();
-    let mut num_regions = 0;
+    let mut regions = Vec::new();
 
-    while let Some((idx, _)) = to_set.iter().enumerate().find(|(_, b)| **b) {
-        q.push_back(to_visit[idx]);
+    for pos in map.iter().collect_vec() {
+        if seen.contains(&pos) {
+            continue;
+        }
+        seen.insert(pos);
+        let mut region = Region::new();
+        region.insert(pos);
+        q.clear();
+        q.push_back(pos);
 
         while let Some(cur) = q.pop_front() {
-            let idx_ = (cur.x + cur.y * map.size.x) as usize;
-            if !to_set[idx_] {
-                continue;
-            }
-            to_set[idx_] = false;
-
-            cache_builder(num_regions, cur);
-
-            let tile_ref = map.get_unchecked_mut_ref(cur);
-
             // R,D,L,U
             for (dir, neigh) in cur.neighbors_rdlu().enumerate() {
-                if !map_copy.within(neigh) || tile_ref.ch != map_copy.get_unchecked(neigh).ch {
-                    tile_ref.fences |= 1 << dir;
-                } else {
+                if !map.within(neigh) || map.get_unchecked(cur).ch != map.get_unchecked(neigh).ch {
+                    map.get_unchecked_mut_ref(cur).fences |= 1 << dir;
+                } else if !region.contains(&neigh) {
+                    region.insert(neigh);
                     q.push_back(neigh);
                 }
             }
         }
-
-        num_regions += 1;
+        seen.extend(region.iter());
+        regions.push(region);
     }
-
-    num_regions
+    regions
 }
 
-fn inner_sides(map: &Map<Tile>, positions: &HashSet<Pos>) -> usize {
+fn inner_sides(map: &Map<Tile>, region: &Region) -> usize {
     let mut min_x = i32::MAX;
     let mut max_x = i32::MIN;
     let mut min_y = i32::MAX;
     let mut max_y = i32::MIN;
-    for pos in positions {
+    for pos in region {
         min_x = min_x.min(pos.x);
         max_x = max_x.max(pos.x);
         min_y = min_y.min(pos.y);
@@ -216,7 +207,7 @@ fn inner_sides(map: &Map<Tile>, positions: &HashSet<Pos>) -> usize {
     }
 
     let our_tile = Tile::from(
-        map.get_unchecked(positions.iter().next().expect("empty region"))
+        map.get_unchecked(region.iter().next().expect("empty region"))
             .ch,
     );
     let other_tile = Tile::from('.');
@@ -228,7 +219,7 @@ fn inner_sides(map: &Map<Tile>, positions: &HashSet<Pos>) -> usize {
             .map(|(y, x)| Pos::from((x, y)))
             .map(|pos| {
                 let tile = map.get_unchecked(pos);
-                if tile.ch == our_tile.ch && positions.contains(&pos) {
+                if tile.ch == our_tile.ch && region.contains(&pos) {
                     our_tile
                 } else {
                     other_tile
@@ -236,18 +227,13 @@ fn inner_sides(map: &Map<Tile>, positions: &HashSet<Pos>) -> usize {
             }),
     );
 
-    let mut region_id_to_pos = HashMap::new();
-    let num_regions = assign_regions(&mut mini_map, |region_id, pos| {
-        region_id_to_pos
-            .entry(region_id)
-            .or_insert(Vec::new())
-            .push(pos);
-    });
+    let regions = assign_regions(&mut mini_map);
 
-    (0..num_regions)
-        .filter_map(|region_id| region_id_to_pos.get(&region_id))
-        .filter(|positions| !is_outside_region(&mini_map, positions[0]))
-        .map(|positions| Explorer::new(&mini_map, positions.iter()).sides())
+    regions
+        .into_iter()
+        .filter_map(|region| region.into_iter().next())
+        .filter(|&pos| mini_map.get_unchecked(pos).ch == '.' && !is_outside_region(&mini_map, pos))
+        .map(|pos| Explorer::new(&mini_map, pos).sides())
         .sum()
 }
 
@@ -262,22 +248,20 @@ fn is_outside_region(map: &Map<Tile>, start_pos: Pos) -> bool {
         }
         seen.insert(cur);
         for neigh in cur.neighbors_diag() {
-            if map.get(neigh).is_some_and(|t| t.ch == '.') {
-                q.push_back(neigh)
-            } else if map.get(neigh).is_none() {
-                return true;
+            match map.get(neigh) {
+                None => return true,
+                Some(tile) if tile.ch == '.' => q.push_back(neigh),
+                _ => {}
             }
         }
     }
     false
 }
 
-fn area_and_perimeter<'a>(
-    map: &'a Map<Tile>,
-    positions: impl Iterator<Item = &'a Pos>,
-) -> (usize, usize) {
+fn area_and_perimeter(map: &Map<Tile>, region: &Region) -> (usize, usize) {
     let mut area = 0;
-    let perimeter = positions
+    let perimeter = region
+        .iter()
         .map(|pos| map.get_unchecked(pos))
         .map(|tile| {
             area += 1;
@@ -285,12 +269,6 @@ fn area_and_perimeter<'a>(
         })
         .sum::<usize>();
     (area, perimeter)
-}
-
-fn leftmost<'a>(map: &'a Map<Tile>, positions: impl Iterator<Item = &'a Pos>) -> Pos {
-    *positions
-        .min_by_key(|p| p.x * map.size.y + p.y)
-        .expect("empty region")
 }
 
 aoc_2024::main! {
