@@ -3,9 +3,9 @@
 //! Description.
 
 fn solve() -> (usize, usize) {
-    let input = include_str!("../../inputs/00.in");
+    let input = include_str!("../../inputs/00.ex");
 
-    (0, 0)
+    (input.len(), 0)
 }
 
 aoc_2024::main! {
