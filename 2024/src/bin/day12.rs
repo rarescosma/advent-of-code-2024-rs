@@ -174,16 +174,19 @@ fn assign_regions(map: &mut Map<Tile>) -> Vec<Region> {
         if seen[index_of(pos)] {
             continue;
         }
-        seen[index_of(pos)] = true;
         let mut region = Region::new();
-        region.insert(pos);
         q.clear();
+
+        seen[index_of(pos)] = true;
+        region.insert(pos);
         q.push_back(pos);
 
         while let Some(cur) = q.pop_front() {
             // R,D,L,U
             for (dir, neigh) in cur.neighbors_rdlu().enumerate() {
-                if !map.within(neigh) || map.get_unchecked(cur).ch != map.get_unchecked(neigh).ch {
+                let crop = map.get_unchecked(cur).ch;
+
+                if !map.within(neigh) || map.get_unchecked(neigh).ch != crop {
                     map.get_unchecked_mut_ref(cur).fences |= 1 << dir;
                 } else if !region.contains(&neigh) {
                     seen[index_of(neigh)] = true;
