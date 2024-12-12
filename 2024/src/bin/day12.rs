@@ -163,15 +163,18 @@ fn solve() -> (usize, usize) {
 }
 
 fn assign_regions(map: &mut Map<Tile>) -> Vec<Region> {
-    let mut seen = HashSet::new();
+    let mut seen = vec![false; (map.size.x * map.size.y) as usize];
     let mut q = VecDeque::new();
     let mut regions = Vec::new();
 
+    let row_size = map.size.x;
+    let index_of = |p: Pos| (p.x + p.y * row_size) as usize;
+
     for pos in map.iter().collect_vec() {
-        if seen.contains(&pos) {
+        if seen[index_of(pos)] {
             continue;
         }
-        seen.insert(pos);
+        seen[index_of(pos)] = true;
         let mut region = Region::new();
         region.insert(pos);
         q.clear();
@@ -183,12 +186,12 @@ fn assign_regions(map: &mut Map<Tile>) -> Vec<Region> {
                 if !map.within(neigh) || map.get_unchecked(cur).ch != map.get_unchecked(neigh).ch {
                     map.get_unchecked_mut_ref(cur).fences |= 1 << dir;
                 } else if !region.contains(&neigh) {
+                    seen[index_of(neigh)] = true;
                     region.insert(neigh);
                     q.push_back(neigh);
                 }
             }
         }
-        seen.extend(region.iter());
         regions.push(region);
     }
     regions
