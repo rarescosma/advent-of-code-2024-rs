@@ -9,15 +9,15 @@ use aoc_prelude::num_integer::Integer;
 fn solve() -> (Int, Int) {
     let (p1, p2) = include_str!("../../inputs/13.in")
         .split("\n\n")
-        .map(|lines| {
+        .filter_map(|lines| {
             let mut lines = lines.lines();
-            let e1 = extract_nums(lines.next().unwrap());
-            let e2 = extract_nums(lines.next().unwrap());
-            let r = extract_nums(lines.next().unwrap());
-            (
+            let e1 = extract_nums(lines.next()?)?;
+            let e2 = extract_nums(lines.next()?)?;
+            let r = extract_nums(lines.next()?)?;
+            Some((
                 solve_eq(e1, e2, r).map(token_total),
                 solve_eq(e1, e2, [r[0] + 10000000000000, r[1] + 10000000000000]).map(token_total),
-            )
+            ))
         })
         .fold((0, 0), |acc, res| {
             (acc.0 + res.0.unwrap_or(0), acc.1 + res.1.unwrap_or(0))
@@ -27,14 +27,14 @@ fn solve() -> (Int, Int) {
 }
 
 #[inline]
-fn extract_nums(s: &str) -> [Int; 2] {
+fn extract_nums(s: &str) -> Option<[Int; 2]> {
     let mut it = s
         .split_ascii_whitespace()
         .flat_map(|part| part.split("+"))
         .flat_map(|part| part.split(","))
         .flat_map(|part| part.split("="))
         .flat_map(str::parse::<Int>);
-    [it.next().unwrap(), it.next().unwrap()]
+    Some([it.next()?, it.next()?])
 }
 
 #[inline]
