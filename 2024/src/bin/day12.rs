@@ -8,20 +8,14 @@
 //! - implement an explorer that "hugs" the right wall of any region
 //! - the number of turns it takes before getting back to the initial state is
 //!   equal to the number of sides
-//! - for each region we consider a smaller mini-map that contains it, and
-//!   replace all other tiles with '.' (so we get an implicit merge of contained sub-regions)
-//! - we then look at all regions again to figure out whether we can reach the
-//!   mini-map edges. If not => we got ourselves a sub-region
-//! - run Explorers on the sub-regions and add the resulting perimeter to the
-//!   parent region
+//! - run Explorers until the set of fenced tiles is empty
+//! - choose start direction so that we have a fence on our right
 
 use aoc_2dmap::prelude::{Map, Pos};
 use aoc_prelude::{HashSet, Itertools};
-use rayon::prelude::*;
-use std::collections::{BTreeSet, VecDeque};
-use std::fmt::{Display, Formatter, Write};
+use std::collections::VecDeque;
 
-type Region = BTreeSet<Pos>;
+type Region = HashSet<Pos>;
 
 type Dir = u8;
 
@@ -67,6 +61,7 @@ impl DirHelper for Dir {
 struct Tile {
     ch: char,
     fences: u8, // UDLR
+    start_dir: u8,
 }
 
 impl From<char> for Tile {
@@ -74,6 +69,7 @@ impl From<char> for Tile {
         Self {
             ch: value,
             fences: 0,
+            start_dir: 0,
         }
     }
 }
@@ -81,12 +77,6 @@ impl From<char> for Tile {
 impl Tile {
     fn has_fence(&self, dir: Dir) -> bool {
         self.fences & dir == dir
-    }
-}
-
-impl Display for Tile {
-    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
-        f.write_char(self.ch)
     }
 }
 
@@ -98,18 +88,24 @@ struct Explorer<'a> {
 }
 
 impl<'a> Explorer<'a> {
-    fn new(map: &'a Map<Tile>, start_pos: Pos) -> Self {
+    fn new(map: &'a Map<Tile>, start_pos: Pos, dir: Dir) -> Self {
         Self {
             pos: start_pos,
-            dir: DOWN,
+            dir,
             map,
-            initial: (start_pos, DOWN),
+            initial: (start_pos, dir),
         }
     }
 
-    fn sides(&mut self) -> usize {
+    fn sides<F: FnMut(Pos)>(&mut self, mut visit: F) -> usize {
         let mut turns = 0;
         loop {
+            visit(self.pos);
+
+            if turns > 0 && (self.pos, self.dir) == self.initial {
+                break;
+            }
+
             let cur_tile = self.map.get_unchecked(self.pos);
 
             // try to turn right and advance
@@ -130,10 +126,6 @@ impl<'a> Explorer<'a> {
             // try to turn left
             self.dir = self.dir.turn_left();
             turns += 1;
-
-            if (self.pos, self.dir) == self.initial {
-                break;
-            }
         }
         turns
     }
@@ -149,15 +141,16 @@ fn solve() -> (usize, usize) {
 
     let regions = assign_regions(&mut map);
 
+    let mut fenced = Region::with_capacity(512);
+
     let (p1, p2) = regions
-        .into_par_iter()
+        .into_iter()
         .map(|region| {
             let (area, perimeter) = area_and_perimeter(&map, &region);
-            let sides = Explorer::new(&map, *region.iter().next().expect("empty region")).sides();
-            let inner_sides = inner_sides(&map, &region);
-            (perimeter * area, (sides + inner_sides) * area)
+            let sides = count_sides(&map, &region, &mut fenced);
+            (perimeter * area, sides * area)
         })
-        .reduce(|| (0, 0), |acc, val| (acc.0 + val.0, acc.1 + val.1));
+        .fold((0, 0), |acc, val| (acc.0 + val.0, acc.1 + val.1));
 
     (p1, p2)
 }
@@ -183,11 +176,14 @@ fn assign_regions(map: &mut Map<Tile>) -> Vec<Region> {
 
         while let Some(cur) = q.pop_front() {
             // R,D,L,U
-            for (dir, neigh) in cur.neighbors_rdlu().enumerate() {
-                let crop = map.get_unchecked(cur).ch;
+            let crop = map.get_unchecked(cur).ch;
 
+            for (dir, neigh) in cur.neighbors_rdlu().enumerate() {
                 if !map.within(neigh) || map.get_unchecked(neigh).ch != crop {
-                    map.get_unchecked_mut_ref(cur).fences |= 1 << dir;
+                    let tile = map.get_unchecked_mut_ref(cur);
+                    let fence = 1 << dir;
+                    tile.fences |= fence;
+                    tile.start_dir = fence.turn_left();
                 } else if !region.contains(&neigh) {
                     seen[index_of(neigh)] = true;
                     region.insert(neigh);
@@ -198,70 +194,6 @@ fn assign_regions(map: &mut Map<Tile>) -> Vec<Region> {
         regions.push(region);
     }
     regions
-}
-
-fn inner_sides(map: &Map<Tile>, region: &Region) -> usize {
-    let mut min_x = i32::MAX;
-    let mut max_x = i32::MIN;
-    let mut min_y = i32::MAX;
-    let mut max_y = i32::MIN;
-    for pos in region {
-        min_x = min_x.min(pos.x);
-        max_x = max_x.max(pos.x);
-        min_y = min_y.min(pos.y);
-        max_y = max_y.max(pos.y);
-    }
-
-    let our_tile = Tile::from(
-        map.get_unchecked(region.iter().next().expect("empty region"))
-            .ch,
-    );
-    let other_tile = Tile::from('.');
-
-    let mut mini_map = Map::new(
-        (max_x - min_x + 1, max_y - min_y + 1),
-        (min_y..=max_y)
-            .cartesian_product(min_x..=max_x)
-            .map(|(y, x)| Pos::from((x, y)))
-            .map(|pos| {
-                let tile = map.get_unchecked(pos);
-                if tile.ch == our_tile.ch && region.contains(&pos) {
-                    our_tile
-                } else {
-                    other_tile
-                }
-            }),
-    );
-
-    let regions = assign_regions(&mut mini_map);
-
-    regions
-        .into_iter()
-        .filter_map(|region| region.into_iter().next())
-        .filter(|&pos| mini_map.get_unchecked(pos).ch == '.' && !is_outside_region(&mini_map, pos))
-        .map(|pos| Explorer::new(&mini_map, pos).sides())
-        .sum()
-}
-
-fn is_outside_region(map: &Map<Tile>, start_pos: Pos) -> bool {
-    let mut q = VecDeque::new();
-    let mut seen = HashSet::new();
-    q.push_back(start_pos);
-
-    while let Some(cur) = q.pop_back() {
-        if seen.contains(&cur) {
-            continue;
-        }
-        seen.insert(cur);
-        for neigh in cur.neighbors_diag() {
-            match map.get(neigh) {
-                None => return true,
-                Some(tile) if tile.ch == '.' => q.push_back(neigh),
-                _ => {}
-            }
-        }
-    }
-    false
 }
 
 fn area_and_perimeter(map: &Map<Tile>, region: &Region) -> (usize, usize) {
@@ -275,6 +207,25 @@ fn area_and_perimeter(map: &Map<Tile>, region: &Region) -> (usize, usize) {
         })
         .sum::<usize>();
     (area, perimeter)
+}
+
+fn count_sides(map: &Map<Tile>, region: &Region, fenced: &mut Region) -> usize {
+    fenced.clear();
+    fenced.extend(
+        region
+            .iter()
+            .filter(|pos| map.get_unchecked(pos).fences != 0),
+    );
+
+    let mut sides = 0;
+    while !fenced.is_empty() {
+        let start_pos = fenced.iter().next().unwrap();
+        let start_dir = map.get_unchecked(start_pos).start_dir;
+        sides += Explorer::new(map, *start_pos, start_dir).sides(|pos| {
+            fenced.remove(&pos);
+        });
+    }
+    sides
 }
 
 aoc_2024::main! {
