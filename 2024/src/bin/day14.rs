@@ -60,12 +60,11 @@ fn solve() -> (usize, usize) {
             line.split(|c: char| !c.is_ascii_digit() && c != '-')
                 .filter(|s| !s.is_empty())
                 .flat_map(str::parse::<i32>)
-                .collect_tuple::<(_, _, _, _)>()
-                .map(|(px, py, vx, vy)| (Pos::from((px, py)), Pos::from((vx, vy))))
+                .collect_tuple()
         })
-        .for_each(|(robot, speed)| {
-            robots.push(robot);
-            speeds.push(speed);
+        .for_each(|(rx, ry, sx, sy)| {
+            robots.push(Pos::new(rx, ry));
+            speeds.push(Pos::new(sx, sy));
         });
 
     let p1 = into_quadrants(
