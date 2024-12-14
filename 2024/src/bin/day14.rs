@@ -23,17 +23,19 @@ const MID: Pos = Pos::c_new(50, 51);
 const CYCLE_LEN: usize = 101 * 103;
 const SET_SIZE: usize = ((MAP_SIZE.x * MAP_SIZE.y) as usize / 16) + 1;
 
-struct BitSet<const N: usize> {
-    inner: [u16; N],
+struct BitSet {
+    inner: [u16; SET_SIZE],
 }
 
-impl<const N: usize> Default for BitSet<N> {
+impl Default for BitSet {
     fn default() -> Self {
-        Self { inner: [0; N] }
+        Self {
+            inner: [0; SET_SIZE],
+        }
     }
 }
 
-impl<const N: usize> BitSet<N> {
+impl BitSet {
     // returns true if the shard becomes all ones
     fn set(&mut self, p: &Pos) -> bool {
         let idx = (p.y * MAP_SIZE.x + p.x) as usize;
@@ -78,7 +80,7 @@ fn solve() -> (usize, usize) {
     let p2 = AtomicUsize::new(0);
 
     (0..num_threads).into_par_iter().for_each(|offset| {
-        let mut bit_set = BitSet::<SET_SIZE>::default();
+        let mut bit_set = BitSet::default();
         let mut i = 0;
         loop {
             let check = i * num_threads + offset;
