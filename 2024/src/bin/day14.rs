@@ -49,8 +49,8 @@ impl<const N: usize> BitSet<N> {
 }
 
 fn solve() -> (usize, usize) {
-    let mut robots = Vec::with_capacity(500);
-    let mut speeds = Vec::with_capacity(500);
+    let mut robots = Vec::with_capacity(512);
+    let mut speeds = Vec::with_capacity(512);
 
     include_str!("../../inputs/14.in")
         .lines()
@@ -101,17 +101,22 @@ fn solve() -> (usize, usize) {
 }
 
 fn into_quadrants(robots: impl Iterator<Item = Pos>) -> usize {
-    let (up, down): (Vec<Pos>, Vec<Pos>) = robots.partition(|robot| robot.y < MID.y);
-    let (first, second): (Vec<Pos>, Vec<Pos>) = up.iter().partition(|robot| robot.x < MID.x);
-    let (third, fourth): (Vec<Pos>, Vec<Pos>) = down.iter().partition(|robot| robot.x < MID.x);
+    let (mut first, mut second, mut third, mut fourth) = (0, 0, 0, 0);
+    robots.for_each(|bot| match (bot.y < MID.y, bot.x < MID.x) {
+        (true, true) => first += 1,
+        (true, false) => second += 1,
+        (false, true) => third += 1,
+        (false, false) => fourth += 1,
+    });
 
-    first.len() * second.len() * third.len() * fourth.len()
+    first * second * third * fourth
 }
 
 fn fast_forward_pos(pos: Pos, speed: Pos, turns: i32) -> Pos {
-    let px = fast_forward_coord(pos.x, speed.x, turns, MAP_SIZE.x);
-    let py = fast_forward_coord(pos.y, speed.y, turns, MAP_SIZE.y);
-    Pos::new(px, py)
+    Pos::new(
+        fast_forward_coord(pos.x, speed.x, turns, MAP_SIZE.x),
+        fast_forward_coord(pos.y, speed.y, turns, MAP_SIZE.y),
+    )
 }
 
 fn fast_forward_coord(initial: i32, speed: i32, turns: i32, map_size: i32) -> i32 {
