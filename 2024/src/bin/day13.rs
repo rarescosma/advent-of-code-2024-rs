@@ -30,10 +30,8 @@ fn solve() -> (Int, Int) {
 #[inline]
 fn extract_nums(s: &str) -> Option<Pair> {
     let mut it = s
-        .split_ascii_whitespace()
-        .flat_map(|part| part.split("+"))
-        .flat_map(|part| part.split(","))
-        .flat_map(|part| part.split("="))
+        .split(|c: char| !c.is_ascii_digit())
+        .filter(|s| !s.is_empty())
         .flat_map(str::parse::<Int>);
     Some((it.next()?, it.next()?))
 }
