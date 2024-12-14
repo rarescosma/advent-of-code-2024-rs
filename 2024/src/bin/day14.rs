@@ -101,15 +101,9 @@ fn solve() -> (usize, usize) {
 }
 
 fn into_quadrants(robots: impl Iterator<Item = Pos>) -> usize {
-    let (mut first, mut second, mut third, mut fourth) = (0, 0, 0, 0);
-    robots.for_each(|bot| match (bot.y < MID.y, bot.x < MID.x) {
-        (true, true) => first += 1,
-        (true, false) => second += 1,
-        (false, true) => third += 1,
-        (false, false) => fourth += 1,
-    });
-
-    first * second * third * fourth
+    let mut quads = [0, 0, 0, 0];
+    robots.for_each(|bot| quads[((bot.y < MID.y) as usize * 2) + (bot.x < MID.x) as usize] += 1);
+    quads.iter().product()
 }
 
 fn fast_forward_pos(pos: Pos, speed: Pos, turns: i32) -> Pos {
