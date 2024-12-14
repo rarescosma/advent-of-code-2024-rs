@@ -109,17 +109,9 @@ fn into_quadrants(robots: impl Iterator<Item = Pos>) -> usize {
 
 fn fast_forward_pos(pos: Pos, speed: Pos, turns: i32) -> Pos {
     Pos::new(
-        fast_forward_coord(pos.x, speed.x, turns, MAP_SIZE.x),
-        fast_forward_coord(pos.y, speed.y, turns, MAP_SIZE.y),
+        (pos.x + speed.x * turns).rem_euclid(MAP_SIZE.x),
+        (pos.y + speed.y * turns).rem_euclid(MAP_SIZE.y),
     )
-}
-
-fn fast_forward_coord(initial: i32, speed: i32, turns: i32, map_size: i32) -> i32 {
-    let mut res = (initial + speed * turns) % map_size;
-    if res < 0 {
-        res += map_size;
-    }
-    res
 }
 
 aoc_2024::main! {
