@@ -12,7 +12,7 @@
 //! - choose start direction so that we have a fence on our right
 
 use aoc_2dmap::prelude::{Map, Pos};
-use aoc_prelude::{HashSet, Itertools};
+use aoc_prelude::HashSet;
 use std::collections::VecDeque;
 
 type Region = HashSet<Pos>;
@@ -132,46 +132,36 @@ impl<'a> Explorer<'a> {
 }
 
 fn solve() -> (usize, usize) {
-    let input = include_str!("../../inputs/12.in").lines().collect_vec();
-
+    let input = include_str!("../../inputs/12.in");
+    let map_size = Pos::from((
+        input.chars().filter(|x| *x == '\n').count(),
+        input.chars().position(|x| x == '\n').unwrap(),
+    ));
     let mut map = Map::new(
-        (input[0].len(), input.len()),
-        input.join("").chars().map(Tile::from),
+        map_size,
+        input.chars().filter(|&c| c != '\n').map(Tile::from),
     );
 
-    let regions = assign_regions(&mut map);
-
-    let mut fenced = Region::with_capacity(512);
-
-    let (p1, p2) = regions
-        .into_iter()
-        .map(|region| {
-            let (area, perimeter) = area_and_perimeter(&map, &region);
-            let sides = count_sides(&map, &region, &mut fenced);
-            (perimeter * area, sides * area)
-        })
-        .fold((0, 0), |acc, val| (acc.0 + val.0, acc.1 + val.1));
-
-    (p1, p2)
-}
-
-fn assign_regions(map: &mut Map<Tile>) -> Vec<Region> {
     let mut seen = vec![false; (map.size.x * map.size.y) as usize];
-    let mut q = VecDeque::new();
-    let mut regions = Vec::new();
+    let mut fenced = Region::with_capacity(1024);
+    let mut q = VecDeque::with_capacity(512);
 
-    let row_size = map.size.x;
-    let index_of = |p: Pos| (p.x + p.y * row_size) as usize;
+    let index_of = |p: Pos| (p.x + p.y * map_size.x) as usize;
 
-    for pos in map.iter().collect_vec() {
+    let mut p1 = 0;
+    let mut p2 = 0;
+
+    for pos in map_size.iter() {
         if seen[index_of(pos)] {
             continue;
         }
-        let mut region = Region::new();
-        q.clear();
+
+        let mut area = 0;
+        let mut perimeter = 0;
+        fenced.clear();
 
         seen[index_of(pos)] = true;
-        region.insert(pos);
+        q.clear();
         q.push_back(pos);
 
         while let Some(cur) = q.pop_front() {
@@ -184,44 +174,27 @@ fn assign_regions(map: &mut Map<Tile>) -> Vec<Region> {
                     let fence = 1 << dir;
                     tile.fences |= fence;
                     tile.start_dir = fence.turn_left();
-                } else if !region.contains(&neigh) {
+                    fenced.insert(cur);
+                    perimeter += 1;
+                } else if !seen[index_of(neigh)] {
                     seen[index_of(neigh)] = true;
-                    region.insert(neigh);
                     q.push_back(neigh);
                 }
             }
-        }
-        regions.push(region);
-    }
-    regions
-}
-
-fn area_and_perimeter(map: &Map<Tile>, region: &Region) -> (usize, usize) {
-    let mut area = 0;
-    let perimeter = region
-        .iter()
-        .map(|pos| map.get_unchecked(pos))
-        .map(|tile| {
             area += 1;
-            tile.fences.count_ones() as usize
-        })
-        .sum::<usize>();
-    (area, perimeter)
+        }
+        p1 += area * perimeter;
+        p2 += area * count_sides(&map, &mut fenced);
+    }
+    (p1, p2)
 }
 
-fn count_sides(map: &Map<Tile>, region: &Region, fenced: &mut Region) -> usize {
-    fenced.clear();
-    fenced.extend(
-        region
-            .iter()
-            .filter(|pos| map.get_unchecked(pos).fences != 0),
-    );
-
+fn count_sides(map: &Map<Tile>, fenced: &mut Region) -> usize {
     let mut sides = 0;
     while !fenced.is_empty() {
-        let start_pos = fenced.iter().next().unwrap();
+        let start_pos = *fenced.iter().next().unwrap();
         let start_dir = map.get_unchecked(start_pos).start_dir;
-        sides += Explorer::new(map, *start_pos, start_dir).sides(|pos| {
+        sides += Explorer::new(map, start_pos, start_dir).sides(|pos| {
             fenced.remove(&pos);
         });
     }
