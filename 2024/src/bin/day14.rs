@@ -9,7 +9,7 @@
 //! we check if the shard is equal to `u16::MAX` which means we have
 //! 16 bots in a row, which means we found the frame.
 //!
-//! Rayon + atomics to for parallel search.
+//! Sprinkle rayon + atomics for parallel search.
 
 use aoc_2dmap::prelude::Pos;
 use aoc_prelude::num_integer::Integer;
