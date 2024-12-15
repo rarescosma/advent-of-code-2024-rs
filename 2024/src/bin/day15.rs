@@ -96,7 +96,7 @@ fn walk(dirs: &str, start_pos: Pos, buf: &mut Buf, p2: bool) -> i32 {
         }
 
         buf.push_set.clear();
-        push_set(dest, &buf.map, dxy, &mut buf.push_set);
+        push_set(dest, dxy, buf);
         if buf
             .push_set
             .iter()
@@ -122,34 +122,26 @@ fn walk(dirs: &str, start_pos: Pos, buf: &mut Buf, p2: bool) -> i32 {
         .sum()
 }
 
-fn push_set(start_pos: Pos, map: &Map<char>, dy: Pos, p_set: &mut HashSet<Pos>) -> Option<()> {
-    let mut start_pos = start_pos;
-    if map.get(start_pos)? == '.' {
-        return None;
+fn push_set(start_pos: Pos, dy: Pos, buf: &mut Buf) {
+    if buf.map.get_unchecked(start_pos) == '.' {
+        return;
     }
-    if map.get(start_pos)? == ']' {
+
+    let mut start_pos = start_pos;
+    if buf.map.get_unchecked(start_pos) == ']' {
         start_pos += LEFT;
     }
-    p_set.insert(start_pos);
-    p_set.insert(start_pos + RIGHT);
-    let above = [
-        start_pos + dy + LEFT,
-        start_pos + dy,
-        start_pos + dy + RIGHT,
-        start_pos + dy + RIGHT + RIGHT,
-    ];
-    let t = [
-        map.get(above[0])?,
-        map.get(above[1])?,
-        map.get(above[2])?,
-        map.get(above[3])?,
-    ];
-    for x in 0..=2 {
-        if t[x] == '[' && t[x + 1] == ']' {
-            push_set(above[x], map, dy, p_set);
-        }
-    }
-    Some(())
+
+    buf.push_set.insert(start_pos);
+    buf.push_set.insert(start_pos + RIGHT);
+    [LEFT, ZERO, RIGHT]
+        .iter()
+        .map(|&dx| start_pos + dx + dy)
+        .for_each(|check| {
+            if buf.map.get(check) == Some('[') {
+                push_set(check, dy, buf);
+            }
+        });
 }
 
 fn step(dest: Pos, dxy: Pos, map: &mut Map<char>) -> bool {
