@@ -28,35 +28,35 @@ fn solve() -> (i32, i32) {
         map.chars().filter(|x| *x == '\n').count() + 1,
     ));
 
-    let mut map = Map::new(map_size, map.chars().filter(|&c| c != '\n'));
-    let p1_bot = find_bot(&map);
+    let mut p1_map = Map::new(map_size, map.chars().filter(|&c| c != '\n'));
+    let p1_bot = find_bot(&p1_map);
 
-    let mut ext_map = Map::fill((2 * map.size.x, map.size.y), '.');
-    for pos in map.iter() {
-        let (tl, tr) = match map.get_unchecked(pos) {
+    let mut p2_map = Map::fill((2 * p1_map.size.x, p1_map.size.y), '.');
+    for pos in p1_map.iter() {
+        let (tl, tr) = match p1_map.get_unchecked(pos) {
             '#' => ('#', '#'),
             'O' => ('[', ']'),
             '.' => ('.', '.'),
             '@' => ('@', '.'),
             _ => continue,
         };
-        ext_map.set(Pos::new(2 * pos.x, pos.y), tl);
-        ext_map.set(Pos::new(2 * pos.x + 1, pos.y), tr);
+        p2_map.set(Pos::new(2 * pos.x, pos.y), tl);
+        p2_map.set(Pos::new(2 * pos.x + 1, pos.y), tr);
     }
-    let p2_bot = find_bot(&ext_map);
+    let p2_bot = find_bot(&p2_map);
 
-    map.set(p1_bot, '.');
-    ext_map.set(p2_bot, '.');
+    p1_map.set(p1_bot, '.');
+    p2_map.set(p2_bot, '.');
 
     let mut buf = Buf {
-        map,
+        map: p1_map,
         changes: Vec::with_capacity(512),
         push_set: HashSet::with_capacity(512),
     };
 
     let p1 = walk(dirs, p1_bot, &mut buf, false);
 
-    buf.map = ext_map;
+    buf.map = p2_map;
     let p2 = walk(dirs, p2_bot, &mut buf, true);
 
     (p1, p2)
