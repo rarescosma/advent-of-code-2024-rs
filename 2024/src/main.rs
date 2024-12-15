@@ -16,7 +16,7 @@ fn main() {
         .map(|x| x.parent().unwrap().to_owned())
         .expect("cannot get current exe");
 
-    let total_time = (1..=14)
+    let total_time = (1..=15)
         .filter_map(|day_num| {
             let cmd = Command::new(dot_dir.join(format!("day{day_num:0>2}")))
                 .output()
