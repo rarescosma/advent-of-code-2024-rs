@@ -57,10 +57,12 @@ fn solve() -> (i32, i32) {
         queue: VecDeque::with_capacity(10),
     };
 
-    let p1 = walk(dirs, p1_bot, &mut buf, false);
+    walk(dirs, p1_bot, &mut buf);
+    let p1 = tally(&buf.map, 'O');
 
     buf.map = p2_map;
-    let p2 = walk(dirs, p2_bot, &mut buf, true);
+    walk(dirs, p2_bot, &mut buf);
+    let p2 = tally(&buf.map, '[');
 
     (p1, p2)
 }
@@ -75,7 +77,7 @@ fn ch_to_dir(c: char) -> Pos {
     }
 }
 
-fn walk(dirs: &str, start_pos: Pos, buf: &mut Buf, p2: bool) -> i32 {
+fn walk(dirs: &str, start_pos: Pos, buf: &mut Buf) {
     let mut bot = start_pos;
 
     for ch in dirs.chars() {
@@ -108,13 +110,12 @@ fn walk(dirs: &str, start_pos: Pos, buf: &mut Buf, p2: bool) -> i32 {
             bot = dest;
         }
     }
+}
 
-    let box_tile = if p2 { '[' } else { 'O' };
-    buf.map
-        .iter()
-        .filter(|pos| buf.map.get_unchecked(pos) == box_tile)
-        .map(|pos| pos.y * 100 + pos.x)
-        .sum()
+fn find_bot(map: &Map<char>) -> Pos {
+    map.iter()
+        .find(|pos| map.get_unchecked(pos) == '@')
+        .unwrap()
 }
 
 fn push_set(start_pos: Pos, dy: Pos, buf: &mut Buf) {
@@ -131,20 +132,19 @@ fn push_set(start_pos: Pos, dy: Pos, buf: &mut Buf) {
             buf.queue.push_back(pos + dy)
         }
         if tile == ']' && !buf.push_set.contains(&(pos + LEFT)) {
-            buf.push_set.insert(pos + LEFT);
             buf.queue.push_back(pos + LEFT);
         }
         if tile == '[' && !buf.push_set.contains(&(pos + RIGHT)) {
-            buf.push_set.insert(pos + RIGHT);
             buf.queue.push_back(pos + RIGHT);
         }
     }
 }
 
-fn find_bot(map: &Map<char>) -> Pos {
+fn tally(map: &Map<char>, box_ch: char) -> i32 {
     map.iter()
-        .find(|pos| map.get_unchecked(pos) == '@')
-        .unwrap()
+        .filter(|pos| map.get_unchecked(pos) == box_ch)
+        .map(|pos| pos.y * 100 + pos.x)
+        .sum()
 }
 
 fn is_box(tile: char) -> bool {
