@@ -134,8 +134,8 @@ impl<'a> Explorer<'a> {
 fn solve() -> (usize, usize) {
     let input = include_str!("../../inputs/12.in");
     let map_size = Pos::from((
-        input.chars().filter(|x| *x == '\n').count(),
         input.chars().position(|x| x == '\n').unwrap(),
+        input.chars().filter(|x| *x == '\n').count(),
     ));
     let mut map = Map::new(
         map_size,
