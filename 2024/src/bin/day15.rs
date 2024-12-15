@@ -5,6 +5,7 @@
 
 use aoc_2dmap::prelude::{Map, Pos};
 use aoc_prelude::HashSet;
+use std::collections::VecDeque;
 
 const UP: Pos = Pos::c_new(0, -1);
 const DOWN: Pos = Pos::c_new(0, 1);
@@ -16,6 +17,7 @@ struct Buf {
     map: Map<char>,
     changes: Vec<(Pos, char)>,
     push_set: HashSet<Pos>,
+    queue: VecDeque<Pos>,
 }
 
 fn solve() -> (i32, i32) {
@@ -52,6 +54,7 @@ fn solve() -> (i32, i32) {
         map: p1_map,
         changes: Vec::with_capacity(512),
         push_set: HashSet::with_capacity(512),
+        queue: VecDeque::with_capacity(10),
     };
 
     let p1 = walk(dirs, p1_bot, &mut buf, false);
@@ -88,14 +91,6 @@ fn walk(dirs: &str, start_pos: Pos, buf: &mut Buf, p2: bool) -> i32 {
             continue;
         }
 
-        if !p2 || (dxy == LEFT || dxy == RIGHT) {
-            if step(dest, dxy, &mut buf.map) {
-                bot = dest;
-            }
-            continue;
-        }
-
-        buf.push_set.clear();
         push_set(dest, dxy, buf);
         if buf
             .push_set
@@ -103,12 +98,12 @@ fn walk(dirs: &str, start_pos: Pos, buf: &mut Buf, p2: bool) -> i32 {
             .all(|&pos| buf.map.get_unchecked(pos + dxy) != '#')
         {
             buf.changes.clear();
-            for pos in &buf.push_set {
-                buf.changes.push((*pos + dxy, buf.map.get_unchecked(pos)));
+            for &pos in &buf.push_set {
+                buf.changes.push((pos + dxy, buf.map.get_unchecked(pos)));
                 buf.map.set(pos, '.');
             }
-            for (new_pos, tile) in &buf.changes {
-                buf.map.set(new_pos, *tile);
+            for &(new_pos, tile) in &buf.changes {
+                buf.map.set(new_pos, tile);
             }
             bot = dest;
         }
@@ -123,42 +118,27 @@ fn walk(dirs: &str, start_pos: Pos, buf: &mut Buf, p2: bool) -> i32 {
 }
 
 fn push_set(start_pos: Pos, dy: Pos, buf: &mut Buf) {
-    if buf.map.get_unchecked(start_pos) == '.' {
-        return;
-    }
-
-    let mut start_pos = start_pos;
-    if buf.map.get_unchecked(start_pos) == ']' {
-        start_pos += LEFT;
-    }
+    buf.push_set.clear();
+    buf.queue.clear();
 
     buf.push_set.insert(start_pos);
-    buf.push_set.insert(start_pos + RIGHT);
-    [LEFT, ZERO, RIGHT]
-        .iter()
-        .map(|&dx| start_pos + dx + dy)
-        .for_each(|check| {
-            if buf.map.get(check) == Some('[') {
-                push_set(check, dy, buf);
-            }
-        });
-}
+    buf.queue.push_back(start_pos);
 
-fn step(dest: Pos, dxy: Pos, map: &mut Map<char>) -> bool {
-    let mut tile = map.get_unchecked(dest);
-    let mut run = dest;
-    while is_box(tile) {
-        run += dxy;
-        tile = map.get_unchecked(run);
-    }
-    if tile == '.' {
-        while run != dest {
-            map.swap(run, run - dxy);
-            run = run - dxy;
+    while let Some(pos) = buf.queue.pop_front() {
+        let tile = buf.map.get_unchecked(pos);
+        if is_box(tile) {
+            buf.push_set.insert(pos);
+            buf.queue.push_back(pos + dy)
         }
-        return true;
+        if tile == ']' && !buf.push_set.contains(&(pos + LEFT)) {
+            buf.push_set.insert(pos + LEFT);
+            buf.queue.push_back(pos + LEFT);
+        }
+        if tile == '[' && !buf.push_set.contains(&(pos + RIGHT)) {
+            buf.push_set.insert(pos + RIGHT);
+            buf.queue.push_back(pos + RIGHT);
+        }
     }
-    false
 }
 
 fn find_bot(map: &Map<char>) -> Pos {
