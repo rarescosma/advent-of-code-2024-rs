@@ -5,11 +5,7 @@
 
 use std::collections::VecDeque;
 
-const UP: Pos = Pos::c_new(0, -1);
-const DOWN: Pos = Pos::c_new(0, 1);
-const LEFT: Pos = Pos::c_new(-1, 0);
-const RIGHT: Pos = Pos::c_new(1, 0);
-use aoc_2dmap::prelude::{Map, Pos, ORTHOGONAL};
+use aoc_2dmap::prelude::*;
 use aoc_prelude::HashSet;
 
 const ZERO: Pos = Pos::c_new(0, 0);
@@ -68,10 +64,10 @@ fn solve() -> (i32, i32) {
 
 fn ch_to_dir(c: char) -> Pos {
     match c {
-        '^' => UP,
-        '>' => RIGHT,
-        '<' => LEFT,
-        'v' => DOWN,
+        '^' => NORTH,
+        '>' => EAST,
+        'v' => SOUTH,
+        '<' => WEST,
         _ => ZERO,
     }
 }
@@ -124,11 +120,11 @@ fn push_set(start_pos: Pos, dy: Pos, buf: &mut Buf) {
             buf.push_set.insert(pos);
             buf.queue.push_back(pos + dy)
         }
-        if tile == ']' && !buf.push_set.contains(&(pos + LEFT)) {
-            buf.queue.push_back(pos + LEFT);
+        if tile == ']' && !buf.push_set.contains(&(pos + WEST)) {
+            buf.queue.push_back(pos + WEST);
         }
-        if tile == '[' && !buf.push_set.contains(&(pos + RIGHT)) {
-            buf.queue.push_back(pos + RIGHT);
+        if tile == '[' && !buf.push_set.contains(&(pos + EAST)) {
+            buf.queue.push_back(pos + EAST);
         }
     }
 }

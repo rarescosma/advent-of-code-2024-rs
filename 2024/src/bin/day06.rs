@@ -11,8 +11,6 @@
 use aoc_2dmap::prelude::*;
 use aoc_prelude::{num_integer::Integer, Itertools};
 
-const DXY: [Pos; 4] = [Pos::c_new(0, -1), Pos::c_new(1, 0), Pos::c_new(0, 1), Pos::c_new(-1, 0)];
-
 fn turn_right(dir: usize) -> usize { (dir + 1) % 4 }
 
 fn turn_back(dir: usize) -> usize { (dir + 2) % 4 }
@@ -76,7 +74,7 @@ fn has_cycle(map: &Map<char>, start: Pos, buffers: &mut Buffers) -> bool {
     buffers.visited_pos[(start.x * map.size.y + start.y) as usize] = true;
 
     loop {
-        cur += DXY[dir];
+        cur += ORTHOGONAL[dir];
         if cur.x < 0 || cur.y < 0 || cur.x == map.size.x || cur.y == map.size.y {
             return false;
         }
@@ -84,7 +82,7 @@ fn has_cycle(map: &Map<char>, start: Pos, buffers: &mut Buffers) -> bool {
         let hash = ((cur.x * map.size.y + cur.y) * 4) as usize + dir;
         if c == '#' {
             // backtrack + turn right
-            let opposite = DXY[turn_back(dir)];
+            let opposite = ORTHOGONAL[turn_back(dir)];
             cur += opposite;
             dir = turn_right(dir);
         } else {
