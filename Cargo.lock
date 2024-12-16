@@ -35,11 +35,8 @@ name = "aoc_2024"
 version = "0.1.0"
 dependencies = [
  "aoc_2dmap",
- "aoc_cycles",
  "aoc_dijsktra",
  "aoc_prelude",
- "pest",
- "pest_derive",
  "rayon",
  "regex",
 ]
@@ -49,16 +46,6 @@ name = "aoc_2dmap"
 version = "0.1.0"
 dependencies = [
  "num-traits",
-]
-
-[[package]]
-name = "aoc_cycles"
-version = "0.1.0"
-dependencies = [
- "ahash",
- "aoc_dijsktra",
- "hashbrown",
- "lazy_static",
 ]
 
 [[package]]

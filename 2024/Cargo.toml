@@ -8,10 +8,7 @@ default-run = "aoc_2024"
 [dependencies]
 aoc_2dmap.workspace = true
 aoc_prelude.workspace = true
-aoc_cycles.workspace = true
 aoc_dijsktra.workspace = true
 
-pest.workspace = true
-pest_derive.workspace = true
 rayon.workspace = true
 regex.workspace = true
