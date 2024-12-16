@@ -3,22 +3,11 @@
 //! Shove the pebble tally in a HashMap and accumulate changes in a Vec, then
 //! apply them sequentially.
 
-use aoc_prelude::num_integer::Integer;
-use aoc_prelude::{ArrayVec, HashMap};
+use aoc_prelude::{num_integer::Integer, ArrayVec, HashMap};
 
 type Int = i64;
-const TENS: [Int; 10] = [
-    1,
-    10,
-    100,
-    1_000,
-    10_000,
-    100_000,
-    1_000_000,
-    10_000_000,
-    100_000_000,
-    1_000_000_000,
-];
+const TENS: [Int; 10] =
+    [1, 10, 100, 1_000, 10_000, 100_000, 1_000_000, 10_000_000, 100_000_000, 1_000_000_000];
 
 fn solve() -> (Int, Int) {
     let mut tally: HashMap<Int, Int> = include_str!("../../inputs/11.in")
@@ -42,9 +31,7 @@ fn solve() -> (Int, Int) {
     (p1, p2)
 }
 
-fn num_digits(num: Int) -> u32 {
-    num.ilog10() + 1
-}
+fn num_digits(num: Int) -> u32 { num.ilog10() + 1 }
 
 fn split(num: Int) -> Option<(Int, Int)> {
     let digits = num_digits(num);

@@ -9,23 +9,13 @@
 //! Gotcha for part 2: when using a Vec as boolean array, you gotta `.fill(false)` instead of
 //! `.clear()` it.
 use aoc_2dmap::prelude::*;
-use aoc_prelude::num_integer::Integer;
-use aoc_prelude::Itertools;
+use aoc_prelude::{num_integer::Integer, Itertools};
 
-const DXY: [Pos; 4] = [
-    Pos::c_new(0, -1),
-    Pos::c_new(1, 0),
-    Pos::c_new(0, 1),
-    Pos::c_new(-1, 0),
-];
+const DXY: [Pos; 4] = [Pos::c_new(0, -1), Pos::c_new(1, 0), Pos::c_new(0, 1), Pos::c_new(-1, 0)];
 
-fn turn_right(dir: usize) -> usize {
-    (dir + 1) % 4
-}
+fn turn_right(dir: usize) -> usize { (dir + 1) % 4 }
 
-fn turn_back(dir: usize) -> usize {
-    (dir + 2) % 4
-}
+fn turn_back(dir: usize) -> usize { (dir + 2) % 4 }
 
 struct Buffers {
     states: Vec<bool>,
@@ -36,10 +26,7 @@ impl Buffers {
     fn allocate(size: MapSize) -> Self {
         let states = vec![false; (size.x * size.y) as usize * 4];
         let visited_pos = vec![false; (size.x * size.y) as usize];
-        Self {
-            states,
-            visited_pos,
-        }
+        Self { states, visited_pos }
     }
 
     fn clear(&mut self) {
@@ -66,14 +53,7 @@ fn solve() -> (usize, usize) {
     let p1 = buffers.visited_pos.iter().filter(|&x| *x).count();
 
     let mut p2 = 0;
-    for hash in buffers
-        .visited_pos
-        .clone()
-        .iter()
-        .enumerate()
-        .filter(|x| *x.1)
-        .map(|x| x.0)
-    {
+    for hash in buffers.visited_pos.clone().iter().enumerate().filter(|x| *x.1).map(|x| x.0) {
         let (x, y) = hash.div_rem(&(map.size.y as usize));
 
         let cand = Pos::from((x, y));

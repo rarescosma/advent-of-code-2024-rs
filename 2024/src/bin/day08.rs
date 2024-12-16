@@ -54,9 +54,7 @@ fn within(p: &Pos, map_size: &MapSize) -> bool {
     p.x >= 0 && p.x < map_size.x && p.y >= 0 && p.y < map_size.y
 }
 
-fn index(p: &Pos, map_size: &MapSize) -> usize {
-    (p.y * map_size.x + p.x) as usize
-}
+fn index(p: &Pos, map_size: &MapSize) -> usize { (p.y * map_size.x + p.x) as usize }
 
 aoc_2024::main! {
     solve()

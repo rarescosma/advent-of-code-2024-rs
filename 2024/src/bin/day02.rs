@@ -10,11 +10,7 @@ use aoc_prelude::Itertools;
 fn solve() -> (usize, usize) {
     let input = include_str!("../../inputs/02.in")
         .lines()
-        .map(|line| {
-            line.split_whitespace()
-                .map(|el| el.parse().unwrap())
-                .collect_vec()
-        })
+        .map(|line| line.split_whitespace().map(|el| el.parse().unwrap()).collect_vec())
         .collect_vec();
 
     let p1 = input.clone().into_iter().filter(is_valid).count();
@@ -41,10 +37,7 @@ fn is_valid(row: &Vec<i32>) -> bool {
     let mut sorted = row.clone();
     sorted.sort_unstable();
 
-    sorted
-        .iter()
-        .zip(sorted.iter().skip(1))
-        .all(|(left, right)| (1..=3).contains(&(right - left)))
+    sorted.iter().zip(sorted.iter().skip(1)).all(|(left, right)| (1..=3).contains(&(right - left)))
         && (row == &sorted || rev == sorted)
 }
 

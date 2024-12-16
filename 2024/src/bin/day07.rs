@@ -23,10 +23,7 @@ fn solve() -> (Int, Int) {
         let (first, rest) = line.split_once(":").unwrap();
         let expected = first.parse::<Int>().unwrap();
         operands.clear();
-        operands.extend(
-            rest.split_ascii_whitespace()
-                .filter_map(|el| el.parse::<Int>().ok()),
-        );
+        operands.extend(rest.split_ascii_whitespace().filter_map(|el| el.parse::<Int>().ok()));
 
         if check::<MUL>(expected, &operands) {
             p1 += expected;

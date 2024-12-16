@@ -10,8 +10,10 @@
 //!
 //! Gotcha was to stop moving files if the destination index is higher than the file
 //! index.
-use std::cmp::{max, Reverse};
-use std::collections::BinaryHeap;
+use std::{
+    cmp::{max, Reverse},
+    collections::BinaryHeap,
+};
 
 #[derive(Debug, Copy, Clone)]
 struct Fext {
@@ -46,32 +48,17 @@ fn solve() -> (usize, usize) {
     let mut start = 0;
     let mut spaces = vec![BinaryHeap::new(); 10];
 
-    include_str!("../../inputs/09.in")
-        .trim()
-        .chars()
-        .enumerate()
-        .for_each(|(idx, c)| {
-            let size = ((c as u8) - b'0') as usize;
-            if is_file(idx) {
-                p1_exts.push(Ext {
-                    files: vec![Fext {
-                        file_no: idx / 2,
-                        size,
-                    }],
-                    start,
-                    free: 0,
-                });
-                start += size;
-            } else {
-                spaces[size].push(Reverse(idx));
-                p1_exts.push(Ext {
-                    files: Vec::new(),
-                    start,
-                    free: size,
-                });
-                start += size;
-            }
-        });
+    include_str!("../../inputs/09.in").trim().chars().enumerate().for_each(|(idx, c)| {
+        let size = ((c as u8) - b'0') as usize;
+        if is_file(idx) {
+            p1_exts.push(Ext { files: vec![Fext { file_no: idx / 2, size }], start, free: 0 });
+            start += size;
+        } else {
+            spaces[size].push(Reverse(idx));
+            p1_exts.push(Ext { files: Vec::new(), start, free: size });
+            start += size;
+        }
+    });
     let mut p2_exts = p1_exts.clone();
 
     part1(&mut p1_exts);
@@ -94,10 +81,7 @@ fn part1(exts: &mut [Ext]) {
                     // last file larger than free space => move part of it
                     let head_free = exts[i].free;
 
-                    exts[i].files.push(Fext {
-                        file_no: tail_file.file_no,
-                        size: head_free,
-                    });
+                    exts[i].files.push(Fext { file_no: tail_file.file_no, size: head_free });
 
                     exts[i].free = 0;
                     exts[j].files[0].size -= head_free;
@@ -134,12 +118,7 @@ fn part2(exts: &mut [Ext], spaces: &mut [BinaryHeap<Reverse<usize>>]) {
         }
 
         if let Some(Reverse(idx)) = (tail_file.size..10)
-            .filter_map(|bucket| {
-                spaces[bucket]
-                    .peek()
-                    .take_if(|x| x.0 <= j)
-                    .map(|x| (bucket, x.0))
-            })
+            .filter_map(|bucket| spaces[bucket].peek().take_if(|x| x.0 <= j).map(|x| (bucket, x.0)))
             .min_by(|(_, idx1), (_, idx2)| idx1.cmp(idx2))
             .and_then(|(bucket, _)| spaces[bucket].pop())
         {
@@ -156,19 +135,14 @@ fn part2(exts: &mut [Ext], spaces: &mut [BinaryHeap<Reverse<usize>>]) {
 }
 
 fn checksum(exts: &[Ext]) -> usize {
-    exts.iter()
-        .filter(|ext| !ext.files.is_empty())
-        .map(|e| e.checksum())
-        .sum()
+    exts.iter().filter(|ext| !ext.files.is_empty()).map(|e| e.checksum()).sum()
 }
 
 fn block_sum(start_block: usize, end_block: usize) -> usize {
     ((max(end_block, 1) - 1) * end_block - (max(start_block, 1) - 1) * start_block) / 2
 }
 
-fn is_file(cursor: usize) -> bool {
-    cursor & 0b1 == 0
-}
+fn is_file(cursor: usize) -> bool { cursor & 0b1 == 0 }
 
 aoc_2024::main! {
     solve()

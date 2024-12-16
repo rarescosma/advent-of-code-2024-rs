@@ -11,9 +11,10 @@
 //! - run Explorers until the set of fenced tiles is empty
 //! - choose start direction so that we have a fence on our right
 
+use std::collections::VecDeque;
+
 use aoc_2dmap::prelude::{Map, Pos};
 use aoc_prelude::HashSet;
-use std::collections::VecDeque;
 
 type Region = HashSet<Pos>;
 
@@ -65,19 +66,11 @@ struct Tile {
 }
 
 impl From<char> for Tile {
-    fn from(value: char) -> Self {
-        Self {
-            ch: value,
-            fences: 0,
-            start_dir: 0,
-        }
-    }
+    fn from(value: char) -> Self { Self { ch: value, fences: 0, start_dir: 0 } }
 }
 
 impl Tile {
-    fn has_fence(&self, dir: Dir) -> bool {
-        self.fences & dir == dir
-    }
+    fn has_fence(&self, dir: Dir) -> bool { self.fences & dir == dir }
 }
 
 struct Explorer<'a> {
@@ -89,12 +82,7 @@ struct Explorer<'a> {
 
 impl<'a> Explorer<'a> {
     fn new(map: &'a Map<Tile>, start_pos: Pos, dir: Dir) -> Self {
-        Self {
-            pos: start_pos,
-            dir,
-            map,
-            initial: (start_pos, dir),
-        }
+        Self { pos: start_pos, dir, map, initial: (start_pos, dir) }
     }
 
     fn sides<F: FnMut(Pos)>(&mut self, mut visit: F) -> usize {
@@ -137,10 +125,7 @@ fn solve() -> (usize, usize) {
         input.chars().position(|x| x == '\n').unwrap(),
         input.chars().filter(|x| *x == '\n').count(),
     ));
-    let mut map = Map::new(
-        map_size,
-        input.chars().filter(|&c| c != '\n').map(Tile::from),
-    );
+    let mut map = Map::new(map_size, input.chars().filter(|&c| c != '\n').map(Tile::from));
 
     let mut seen = vec![false; (map.size.x * map.size.y) as usize];
     let mut fenced = Region::with_capacity(1024);

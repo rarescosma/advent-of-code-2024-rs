@@ -3,14 +3,15 @@
 //! Part 2: Look at a window of 4 tiles above or below the starting position
 //! and check whether we need to add any boxes to the push set.
 
-use aoc_2dmap::prelude::{Map, Pos};
-use aoc_prelude::HashSet;
 use std::collections::VecDeque;
 
 const UP: Pos = Pos::c_new(0, -1);
 const DOWN: Pos = Pos::c_new(0, 1);
 const LEFT: Pos = Pos::c_new(-1, 0);
 const RIGHT: Pos = Pos::c_new(1, 0);
+use aoc_2dmap::prelude::{Map, Pos, ORTHOGONAL};
+use aoc_prelude::HashSet;
+
 const ZERO: Pos = Pos::c_new(0, 0);
 
 struct Buf {
@@ -21,9 +22,7 @@ struct Buf {
 }
 
 fn solve() -> (i32, i32) {
-    let (map, dirs) = include_str!("../../inputs/15.in")
-        .split_once("\n\n")
-        .unwrap();
+    let (map, dirs) = include_str!("../../inputs/15.in").split_once("\n\n").unwrap();
 
     let map_size = Pos::from((
         map.chars().position(|x| x == '\n').unwrap(),
@@ -94,11 +93,7 @@ fn walk(dirs: &str, start_pos: Pos, buf: &mut Buf) {
         }
 
         push_set(dest, dxy, buf);
-        if buf
-            .push_set
-            .iter()
-            .all(|&pos| buf.map.get_unchecked(pos + dxy) != '#')
-        {
+        if buf.push_set.iter().all(|&pos| buf.map.get_unchecked(pos + dxy) != '#') {
             buf.changes.clear();
             for &pos in &buf.push_set {
                 buf.changes.push((pos + dxy, buf.map.get_unchecked(pos)));
@@ -113,9 +108,7 @@ fn walk(dirs: &str, start_pos: Pos, buf: &mut Buf) {
 }
 
 fn find_bot(map: &Map<char>) -> Pos {
-    map.iter()
-        .find(|pos| map.get_unchecked(pos) == '@')
-        .unwrap()
+    map.iter().find(|pos| map.get_unchecked(pos) == '@').unwrap()
 }
 
 fn push_set(start_pos: Pos, dy: Pos, buf: &mut Buf) {
@@ -141,15 +134,10 @@ fn push_set(start_pos: Pos, dy: Pos, buf: &mut Buf) {
 }
 
 fn tally(map: &Map<char>, box_ch: char) -> i32 {
-    map.iter()
-        .filter(|pos| map.get_unchecked(pos) == box_ch)
-        .map(|pos| pos.y * 100 + pos.x)
-        .sum()
+    map.iter().filter(|pos| map.get_unchecked(pos) == box_ch).map(|pos| pos.y * 100 + pos.x).sum()
 }
 
-fn is_box(tile: char) -> bool {
-    tile == 'O' || tile == '[' || tile == ']'
-}
+fn is_box(tile: char) -> bool { tile == 'O' || tile == '[' || tile == ']' }
 
 aoc_2024::main! {
     solve()

@@ -40,30 +40,16 @@ struct State {
 }
 
 impl Default for State {
-    fn default() -> Self {
-        Self {
-            enabled: true,
-            p1: 0,
-            p2: 0,
-        }
-    }
+    fn default() -> Self { Self { enabled: true, p1: 0, p2: 0 } }
 }
 
 fn solve() -> (usize, usize) {
     let input = include_str!("../../inputs/03.in");
     let state =
-        INSTR_REGEX
-            .captures_iter(input)
-            .map(Instr::from)
-            .fold(State::default(), |acc, instr| match instr {
-                Instr::Enable => State {
-                    enabled: true,
-                    ..acc
-                },
-                Instr::Disable => State {
-                    enabled: false,
-                    ..acc
-                },
+        INSTR_REGEX.captures_iter(input).map(Instr::from).fold(State::default(), |acc, instr| {
+            match instr {
+                Instr::Enable => State { enabled: true, ..acc },
+                Instr::Disable => State { enabled: false, ..acc },
                 Instr::Mul(a, b) => {
                     let res = a * b;
                     State {
@@ -73,7 +59,8 @@ fn solve() -> (usize, usize) {
                     }
                 }
                 Instr::Unknown => acc,
-            });
+            }
+        });
 
     (state.p1, state.p2)
 }

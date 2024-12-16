@@ -11,12 +11,14 @@
 //!
 //! Sprinkle rayon + atomics for parallel search.
 
+use std::{
+    sync::atomic::{AtomicBool, AtomicUsize, Ordering},
+    thread::available_parallelism,
+};
+
 use aoc_2dmap::prelude::Pos;
-use aoc_prelude::num_integer::Integer;
-use aoc_prelude::Itertools;
+use aoc_prelude::{num_integer::Integer, Itertools};
 use rayon::prelude::*;
-use std::sync::atomic::{AtomicBool, AtomicUsize, Ordering};
-use std::thread::available_parallelism;
 
 const MAP_SIZE: Pos = Pos::c_new(101, 103);
 const MID: Pos = Pos::c_new(50, 51);
@@ -28,11 +30,7 @@ struct BitSet {
 }
 
 impl Default for BitSet {
-    fn default() -> Self {
-        Self {
-            inner: [0; SET_SIZE],
-        }
-    }
+    fn default() -> Self { Self { inner: [0; SET_SIZE] } }
 }
 
 impl BitSet {
@@ -45,9 +43,7 @@ impl BitSet {
         *word == u16::MAX
     }
 
-    fn clear(&mut self) {
-        self.inner.fill(0);
-    }
+    fn clear(&mut self) { self.inner.fill(0); }
 }
 
 fn solve() -> (usize, usize) {
@@ -68,10 +64,7 @@ fn solve() -> (usize, usize) {
         });
 
     let p1 = into_quadrants(
-        robots
-            .iter()
-            .enumerate()
-            .map(|(idx, pos)| fast_forward_pos(*pos, speeds[idx], 100)),
+        robots.iter().enumerate().map(|(idx, pos)| fast_forward_pos(*pos, speeds[idx], 100)),
     );
 
     let num_threads = available_parallelism().unwrap().get().max(32);

@@ -1,5 +1,4 @@
-use std::error::Error;
-use std::process::Command;
+use std::{error::Error, process::Command};
 
 fn extract_microseconds(output: &str) -> Result<usize, Box<dyn Error>> {
     let out = output.lines().last().unwrap();
@@ -18,9 +17,7 @@ fn main() {
 
     let total_time = (1..=15)
         .filter_map(|day_num| {
-            let cmd = Command::new(dot_dir.join(format!("day{day_num:0>2}")))
-                .output()
-                .unwrap();
+            let cmd = Command::new(dot_dir.join(format!("day{day_num:0>2}"))).output().unwrap();
             let output = String::from_utf8(cmd.stdout).unwrap();
             println!("Day {day_num:0>2}:\n{output}");
             extract_microseconds(&output).ok()

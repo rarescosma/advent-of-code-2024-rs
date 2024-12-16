@@ -5,8 +5,9 @@
 //!
 //! Part 2: How often does each number from the left list appear in the right
 //! list? Accumulate the frequencies.
-use aoc_prelude::HashMap;
 use std::ops::Sub;
+
+use aoc_prelude::HashMap;
 
 fn read_input() -> (Vec<i32>, Vec<i32>) {
     let mut l1 = Vec::new();
@@ -27,19 +28,14 @@ fn solve() -> (i32, i32) {
     left.sort_unstable();
     right.sort_unstable();
 
-    let p1 = left
-        .iter()
-        .zip(right.iter())
-        .fold(0, |acc, e| acc + e.0.sub(e.1).abs());
+    let p1 = left.iter().zip(right.iter()).fold(0, |acc, e| acc + e.0.sub(e.1).abs());
 
     let mut freq = HashMap::new();
     for e in right {
         *freq.entry(e).or_insert(0) += 1;
     }
 
-    let p2 = left
-        .iter()
-        .fold(0, |acc, e| acc + e * freq.get(e).unwrap_or(&0));
+    let p2 = left.iter().fold(0, |acc, e| acc + e * freq.get(e).unwrap_or(&0));
 
     (p1, p2)
 }

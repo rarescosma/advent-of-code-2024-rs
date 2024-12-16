@@ -20,9 +20,7 @@ fn solve() -> (Int, Int) {
                 solve_eq(e0, e1, (r.0 + 10000000000000, r.1 + 10000000000000)).map(token_total),
             ))
         })
-        .fold((0, 0), |acc, res| {
-            (acc.0 + res.0.unwrap_or(0), acc.1 + res.1.unwrap_or(0))
-        });
+        .fold((0, 0), |acc, res| (acc.0 + res.0.unwrap_or(0), acc.1 + res.1.unwrap_or(0)));
 
     (p1, p2)
 }
@@ -43,9 +41,7 @@ fn solve_eq(e0: Pair, e1: Pair, r: Pair) -> Option<Pair> {
 }
 
 #[inline]
-fn token_total((a, b): Pair) -> Int {
-    a * 3 + b
-}
+fn token_total((a, b): Pair) -> Int { a * 3 + b }
 
 aoc_2024::main! {
     solve()

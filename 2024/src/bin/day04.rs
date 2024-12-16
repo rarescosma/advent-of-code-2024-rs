@@ -37,10 +37,7 @@ fn find_str(map: &Map<char>, what: &str) -> usize {
     (0..map.size.y)
         .map(|r| {
             let row = map.get_row(r).join("");
-            row.as_bytes()
-                .windows(win_size)
-                .filter(|window| *window == what.as_bytes())
-                .count()
+            row.as_bytes().windows(win_size).filter(|window| *window == what.as_bytes()).count()
         })
         .sum()
 }
@@ -71,9 +68,8 @@ fn rotate_45<T: Clone>(map: &Map<T>, empty: T) -> Map<T> {
 
     // up to and including main diagonal
     for y in 0..map.size.y {
-        let mut new_row = diag_iter((0, y).into(), map.size)
-            .map(|pos| map.get_unchecked(pos))
-            .collect_vec();
+        let mut new_row =
+            diag_iter((0, y).into(), map.size).map(|pos| map.get_unchecked(pos)).collect_vec();
         new_row.resize(row_size as usize, empty.clone());
         new_rows.push(new_row);
     }
@@ -92,9 +88,7 @@ fn rotate_45<T: Clone>(map: &Map<T>, empty: T) -> Map<T> {
 
 fn diag_iter(p: Pos, map_s: MapSize) -> impl Iterator<Item = Pos> {
     // increase x, decrease y
-    (p.x..map_s.x)
-        .zip(0..=p.y)
-        .map(move |(x, dec_y)| (x, p.y - dec_y).into())
+    (p.x..map_s.x).zip(0..=p.y).map(move |(x, dec_y)| (x, p.y - dec_y).into())
 }
 
 aoc_2024::main! {

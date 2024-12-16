@@ -2,9 +2,10 @@
 //!
 //! Both parts solvable through DFS: set of unique positions for the end goals (9) for part 1,
 //! and number of times we reach the end goal for part 2.
+use std::collections::VecDeque;
+
 use aoc_2dmap::prelude::{Map, Pos};
 use aoc_prelude::{HashSet, Itertools};
-use std::collections::VecDeque;
 
 struct Buf {
     seen: Vec<bool>,
@@ -31,10 +32,8 @@ impl Buf {
 fn solve() -> (usize, usize) {
     let input = include_str!("../../inputs/10.in").lines().collect_vec();
 
-    let map = Map::new(
-        (input[0].len(), input.len()),
-        input.join("").as_bytes().iter().map(|b| b - b'0'),
-    );
+    let map =
+        Map::new((input[0].len(), input.len()), input.join("").as_bytes().iter().map(|b| b - b'0'));
 
     let mut buf = Buf::sized::<{ 59 * 59 }>();
 
