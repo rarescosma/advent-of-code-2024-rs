@@ -5,7 +5,7 @@
 use std::collections::VecDeque;
 
 use aoc_2dmap::prelude::{Map, Pos};
-use aoc_prelude::{HashSet, Itertools};
+use aoc_prelude::HashSet;
 
 struct Buf {
     seen: Vec<bool>,
@@ -30,10 +30,12 @@ impl Buf {
 }
 
 fn solve() -> (usize, usize) {
-    let input = include_str!("../../inputs/10.in").lines().collect_vec();
-
-    let map =
-        Map::new((input[0].len(), input.len()), input.join("").as_bytes().iter().map(|b| b - b'0'));
+    let input = include_str!("../../inputs/10.in");
+    let map_size = Pos::from((
+        input.chars().position(|x| x == '\n').unwrap(),
+        input.chars().filter(|x| *x == '\n').count(),
+    ));
+    let map = Map::new(map_size, input.chars().filter(|&c| c != '\n').map(|b| b as u8 - b'0'));
 
     let mut buf = Buf::sized::<{ 59 * 59 }>();
 

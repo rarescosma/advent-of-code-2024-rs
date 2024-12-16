@@ -22,7 +22,7 @@ fn solve() -> (i32, i32) {
 
     let map_size = Pos::from((
         map.chars().position(|x| x == '\n').unwrap(),
-        map.chars().filter(|x| *x == '\n').count() + 1,
+        map.chars().filter(|x| *x == '\n').count() + 1, // .split_once ate my ending newline
     ));
 
     let mut p1_map = Map::new(map_size, map.chars().filter(|&c| c != '\n'));

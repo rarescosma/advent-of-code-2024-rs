@@ -11,9 +11,12 @@ use aoc_prelude::Itertools;
 const PAT: [Option<char>; 4] = [Some('S'), Some('S'), Some('M'), Some('M')];
 
 fn solve() -> (usize, usize) {
-    let input = include_str!("../../inputs/04.in").lines().collect_vec();
-
-    let mut map = Map::new((input[0].len(), input.len()), input.join("").chars());
+    let input = include_str!("../../inputs/04.in");
+    let map_size = Pos::from((
+        input.chars().position(|x| x == '\n').unwrap(),
+        input.chars().filter(|x| *x == '\n').count(),
+    ));
+    let mut map = Map::new(map_size, input.chars().filter(|&c| c != '\n'));
 
     let mut p1 = find_p1(&map);
     let mut p2 = find_p2(&map);

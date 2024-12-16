@@ -9,7 +9,7 @@
 //! Gotcha for part 2: when using a Vec as boolean array, you gotta `.fill(false)` instead of
 //! `.clear()` it.
 use aoc_2dmap::prelude::*;
-use aoc_prelude::{num_integer::Integer, Itertools};
+use aoc_prelude::num_integer::Integer;
 
 fn turn_right(dir: usize) -> usize { (dir + 1) % 4 }
 
@@ -34,9 +34,12 @@ impl Buffers {
 }
 
 fn solve() -> (usize, usize) {
-    let input = include_str!("../../inputs/06.in").lines().collect_vec();
-
-    let mut map = Map::new((input[0].len(), input.len()), input.join("").chars());
+    let input = include_str!("../../inputs/06.in");
+    let map_size = Pos::from((
+        input.chars().position(|x| x == '\n').unwrap(),
+        input.chars().filter(|x| *x == '\n').count(),
+    ));
+    let mut map = Map::new(map_size, input.chars().filter(|&c| c != '\n'));
 
     let mut start = Pos::default();
     for pos in map.iter() {

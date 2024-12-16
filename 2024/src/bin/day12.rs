@@ -13,7 +13,7 @@
 
 use std::collections::VecDeque;
 
-use aoc_2dmap::prelude::{Map, Pos};
+use aoc_2dmap::prelude::*;
 use aoc_prelude::HashSet;
 
 type Region = HashSet<Pos>;
@@ -47,14 +47,13 @@ impl DirHelper for Dir {
     }
 
     fn to_pos(self) -> Pos {
-        (match self {
-            UP => (0, -1),
-            DOWN => (0, 1),
-            LEFT => (-1, 0),
-            RIGHT => (1, 0),
+        match self {
+            UP => NORTH,
+            DOWN => SOUTH,
+            LEFT => WEST,
+            RIGHT => EAST,
             _ => unreachable!(),
-        })
-        .into()
+        }
     }
 }
 
