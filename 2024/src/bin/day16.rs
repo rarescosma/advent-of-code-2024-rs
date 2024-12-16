@@ -1,6 +1,16 @@
 //! # Reindeer Maze
 //!
-//! Smells like Dijsktra.
+//! Lesson learned: do not try to adapt library code that doesn't fit the
+//! problem statement.
+//!
+//! After many tries ended up storing a backtracking HashMap for *states*
+//! rather than *positions* along with the associated costs.
+//!
+//! Then DFSed through it, always picking from the key with the minimum
+//! cost.
+//!
+//! Simplified it in a second iteration to let the Dijkstra loop take care
+//! of resetting the path set whenever a lower cost is found.
 
 use std::{
     cmp::Reverse,
