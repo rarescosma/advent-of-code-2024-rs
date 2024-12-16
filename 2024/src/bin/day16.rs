@@ -9,8 +9,7 @@ use std::{
 };
 
 use aoc_2dmap::prelude::{Map, Pos, ORTHOGONAL};
-use aoc_dijsktra::hash::KeyMap;
-use aoc_prelude::{Entry, HashMap, HashSet};
+use aoc_prelude::{HashMap, HashSet, Itertools};
 
 const TURN_COST: usize = 1000;
 
@@ -37,9 +36,9 @@ impl Move {
         }
     }
 
-    fn transform(&self, game_state: &State) -> State {
-        let mut new_state = *game_state;
-        new_state.dir = self.change_dir(game_state.dir);
+    fn transform(&self, old_state: &State) -> State {
+        let mut new_state = *old_state;
+        new_state.dir = self.change_dir(old_state.dir);
         new_state.pos += new_state.dir;
         new_state
     }
@@ -61,28 +60,26 @@ impl State {
 }
 
 fn solve() -> (usize, usize) {
-    let map = include_str!("../../inputs/16.in");
+    let input = include_str!("../../inputs/16.in");
     let map_size = Pos::from((
-        map.chars().position(|x| x == '\n').unwrap(),
-        map.chars().filter(|x| *x == '\n').count(),
+        input.chars().position(|x| x == '\n').unwrap(),
+        input.chars().filter(|x| *x == '\n').count(),
     ));
-    let map = Map::new(map_size, map.chars().filter(|&c| c != '\n'));
+    let map = Map::new(map_size, input.chars().filter(|&c| c != '\n'));
 
     let start = find_tile(&map, 'S');
     let goal = find_tile(&map, 'E');
 
-    let state = State { pos: start, dir: Pos::new(1, 0) };
-
     let mut p1 = usize::MAX;
-
-    let mut known = KeyMap::default();
-
+    let mut costs = HashMap::<State, usize>::with_capacity(1000);
+    let mut paths = HashMap::<State, Vec<State>>::with_capacity(1000);
     let mut pq = BinaryHeap::with_capacity(1024);
-    pq.push((Reverse(0), state));
-
-    let mut paths = HashMap::<Pos, HashSet<(State, usize)>>::new();
+    pq.push((Reverse(0), State { pos: start, dir: Pos::new(1, 0) }));
 
     while let Some((Reverse(cost), state)) = pq.pop() {
+        if cost > *costs.get(&state).unwrap_or(&usize::MAX) {
+            continue;
+        }
         if state.pos == goal {
             p1 = cost;
             break;
@@ -91,53 +88,36 @@ fn solve() -> (usize, usize) {
             let new_cost = cost + step.cost();
             let new_state = step.transform(&state);
 
-            match known.entry(&new_state) {
-                // Update if there's a less costly way to get to a known state...
-                Entry::Occupied(mut entry) if new_cost <= *entry.get() => {
-                    entry.insert(new_cost);
-                    pq.push((Reverse(new_cost), new_state));
-                    paths.entry(new_state.pos).or_default().insert((state, new_cost));
-                }
-                // ...or if the state is unknown.
-                Entry::Vacant(entry) => {
-                    entry.insert(new_cost);
-                    pq.push((Reverse(new_cost), new_state));
-                    paths.entry(new_state.pos).or_default().insert((state, new_cost));
-                }
-                _ => {}
+            let cost = *costs.get(&new_state).unwrap_or(&usize::MAX);
+            if new_cost > cost {
+                continue;
             }
+            if new_cost < cost {
+                paths.insert(new_state, Vec::new());
+                costs.insert(new_state, new_cost);
+            }
+            paths.entry(new_state).or_default().push(state);
+            pq.push((Reverse(new_cost), new_state));
         }
     }
 
     let mut q = VecDeque::from(ORTHOGONAL.map(|dir| State { pos: goal, dir }));
-    let mut next = HashMap::with_capacity(200);
+    let mut seen = HashSet::with_capacity(200);
+    seen.extend(q.iter().copied());
 
-    let mut good_tiles = HashSet::new();
-
-    while let Some(start_node) = q.pop_front() {
-        good_tiles.insert(start_node.pos);
-
-        if let Some(back_links) = paths.get(&start_node.pos) {
-            next.clear();
-            let mut min_cost = usize::MAX;
-
-            for &(key, val) in back_links {
-                if val > p1 {
+    while let Some(cur_node) = q.pop_front() {
+        if let Some(prev_nodes) = paths.get(&cur_node) {
+            for state in prev_nodes {
+                if seen.contains(state) {
                     continue;
                 }
-                let mut cost = val;
-                if key.dir != start_node.dir {
-                    cost += 1000;
-                }
-                min_cost = min_cost.min(cost);
-                next.entry(cost).or_insert(Vec::new()).push(key);
-            }
-            if min_cost != usize::MAX {
-                q.extend(&next[&min_cost]);
+                seen.insert(*state);
+                q.push_back(*state);
             }
         }
     }
-    let p2 = good_tiles.len();
+
+    let p2 = seen.iter().map(|state| state.pos).unique().count();
 
     (p1, p2)
 }
