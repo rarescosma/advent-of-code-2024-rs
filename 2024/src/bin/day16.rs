@@ -18,7 +18,7 @@ use std::{
     hash::Hash,
 };
 
-use aoc_2dmap::prelude::{Map, Pos, ORTHOGONAL};
+use aoc_2dmap::prelude::*;
 use aoc_prelude::{HashMap, HashSet, Itertools};
 
 const TURN_COST: usize = 1000;
@@ -87,9 +87,6 @@ fn solve() -> (usize, usize) {
     pq.push((Reverse(0), State { pos: start, dir: Pos::new(1, 0) }));
 
     while let Some((Reverse(cost), state)) = pq.pop() {
-        if cost > *costs.get(&state).unwrap_or(&usize::MAX) {
-            continue;
-        }
         if state.pos == goal {
             p1 = cost;
             break;
@@ -98,11 +95,11 @@ fn solve() -> (usize, usize) {
             let new_cost = cost + step.cost();
             let new_state = step.transform(&state);
 
-            let cost = *costs.get(&new_state).unwrap_or(&usize::MAX);
-            if new_cost > cost {
+            let lowest = *costs.get(&new_state).unwrap_or(&usize::MAX);
+            if new_cost > lowest {
                 continue;
             }
-            if new_cost < cost {
+            if new_cost < lowest {
                 paths.insert(new_state, Vec::new());
                 costs.insert(new_state, new_cost);
             }
