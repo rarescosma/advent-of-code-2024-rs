@@ -70,11 +70,9 @@ fn solve() -> (String, Int) {
 
     let [a, b, c]: [Int; 3] =
         regs.lines().filter_map(|x| extract_nums(x).next()).collect_vec().try_into().unwrap();
-
     let ix = extract_nums(ix).collect_vec();
 
-    let output = eval(a, b, c, &ix);
-    let p1 = format!("{}", output).chars().join(",");
+    let p1 = format!("{}", eval(a, b, c, &ix)).chars().join(",");
 
     let target = ix.iter().fold(0, |acc, digit| acc * 10 + digit);
 
@@ -93,7 +91,9 @@ fn solve() -> (String, Int) {
         }
         mem::swap(&mut initials, &mut new_initials);
     }
+
     let p2 = initials.into_iter().min().expect("no solution?!");
+
     (p1, p2)
 }
 
