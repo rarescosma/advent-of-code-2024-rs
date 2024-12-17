@@ -23,7 +23,7 @@ use aoc_prelude::Itertools;
 
 type Int = u64;
 
-fn eval(a: Int, b: Int, c: Int, ix: &[Int]) -> Int {
+fn eval(a: Int, b: Int, c: Int, program: &[Int]) -> Int {
     let (mut a, mut b, mut c) = (a, b, c);
 
     let mut ip = 0;
@@ -31,7 +31,7 @@ fn eval(a: Int, b: Int, c: Int, ix: &[Int]) -> Int {
     let mut output = 0;
 
     loop {
-        let (it, op) = (ix[ip], ix[ip + 1]);
+        let (it, op) = (program[ip], program[ip + 1]);
 
         let combo = |op: Int| match op {
             0..=3 => op,
@@ -69,30 +69,31 @@ fn solve() -> (String, Int) {
     let (regs, ix) = include_str!("../../inputs/17.in").split_once("\n\n").unwrap();
 
     let [a, b, c]: [Int; 3] =
-        regs.lines().filter_map(|x| extract_nums(x).next()).collect_vec().try_into().unwrap();
-    let ix = extract_nums(ix).collect_vec();
+        regs.lines().filter_map(|line| extract_nums(line).next()).collect_vec().try_into().unwrap();
+    let program = extract_nums(ix).collect_vec();
 
-    let p1 = format!("{}", eval(a, b, c, &ix)).chars().join(",");
+    let p1 = format!("{}", eval(a, b, c, &program)).chars().join(",");
 
-    let target = ix.iter().fold(0, |acc, digit| acc * 10 + digit);
+    let target = program.iter().fold(0, |acc, digit| acc * 10 + digit);
 
-    let mut initials = vec![0];
-    let mut new_initials = Vec::with_capacity(16);
+    let mut a_candidates = vec![0];
+    let mut next_a_candidates = Vec::with_capacity(16);
+
     for digit in 0..=target.ilog10() {
         let look_for = target % 10u64.pow(digit + 1);
-        new_initials.clear();
-        for initial in initials.iter() {
+        next_a_candidates.clear();
+        for initial in a_candidates.iter() {
             let shifted = *initial << 3;
-            new_initials.extend(
+            next_a_candidates.extend(
                 (0..8)
                     .map(|offset| shifted + offset)
-                    .filter(|&cand| eval(cand, b, c, &ix) == look_for),
+                    .filter(|&cand| eval(cand, b, c, &program) == look_for),
             );
         }
-        mem::swap(&mut initials, &mut new_initials);
+        mem::swap(&mut a_candidates, &mut next_a_candidates);
     }
 
-    let p2 = initials.into_iter().min().expect("no solution?!");
+    let p2 = a_candidates.into_iter().min().expect("no solution?!");
 
     (p1, p2)
 }
