@@ -23,6 +23,8 @@ use aoc_prelude::Itertools;
 
 type Int = u64;
 
+const BLOCK_SIZE: Int = 3;
+
 fn eval(a: Int, b: Int, c: Int, program: &[Int]) -> Int {
     let (mut a, mut b, mut c) = (a, b, c);
 
@@ -80,14 +82,13 @@ fn solve() -> (String, Int) {
     let mut next_a_candidates = Vec::with_capacity(16);
 
     for digit in 0..=target.ilog10() {
-        let look_for = target % 10u64.pow(digit + 1);
+        let look_for = target % Int::pow(10, digit + 1);
         next_a_candidates.clear();
-        for initial in a_candidates.iter() {
-            let shifted = *initial << 3;
+        for msbs in a_candidates.iter().map(|bits| *bits << BLOCK_SIZE) {
             next_a_candidates.extend(
-                (0..8)
-                    .map(|offset| shifted + offset)
-                    .filter(|&cand| eval(cand, b, c, &program) == look_for),
+                (0..1 << BLOCK_SIZE)
+                    .map(|lsbs| msbs + lsbs)
+                    .filter(|&a| eval(a, b, c, &program) == look_for),
             );
         }
         mem::swap(&mut a_candidates, &mut next_a_candidates);
