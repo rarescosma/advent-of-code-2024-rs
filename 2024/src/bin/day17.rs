@@ -11,11 +11,11 @@
 //! which they'll get shifted 3 positions to the left.
 //!
 //! So, if A = 0b111_011_100_101
-//!             |___|___|
-//!               ^   ^
+//!             |-+-|-+-|
 //!               |   |
-//! last digit ---+   |
-//! next to last ---+-+
+//!               |   |
+//! last digit <--+   |
+//! next to last <----+
 
 use std::mem;
 
