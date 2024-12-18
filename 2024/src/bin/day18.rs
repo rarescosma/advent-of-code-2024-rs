@@ -10,8 +10,10 @@
 //! is found, then kept placing blocks _until_ one of them intersects the
 //! shortest path, and _only then_ re-perform the Dijsktra. This got the number
 //! of Dijsktra runs down to ~35.
+//!
+//! Optimization #2: replace Dijsktra with DFS since all edges have equal cost.
 
-use std::{cmp::Reverse, collections::BinaryHeap};
+use std::collections::VecDeque;
 
 use aoc_2dmap::prelude::{Map, Pos, ORTHOGONAL};
 use aoc_prelude::{HashMap, HashSet, Itertools};
@@ -23,7 +25,7 @@ const GOAL: Pos = Pos::c_new(MAP_SIZE - 1, MAP_SIZE - 1);
 
 struct Buf {
     costs: HashMap<Pos, usize>,
-    pq: BinaryHeap<(Reverse<usize>, Pos)>,
+    queue: VecDeque<(usize, Pos)>,
     edges: HashMap<Pos, Pos>,
     path: HashSet<Pos>,
 }
@@ -32,7 +34,7 @@ impl Buf {
     fn default() -> Self {
         Self {
             costs: HashMap::with_capacity(1024),
-            pq: BinaryHeap::with_capacity(1024),
+            queue: VecDeque::with_capacity(1024),
             edges: HashMap::with_capacity(1024),
             path: HashSet::with_capacity(1024),
         }
@@ -40,18 +42,18 @@ impl Buf {
 
     fn clear(&mut self) {
         self.costs.clear();
-        self.pq.clear();
+        self.queue.clear();
         self.edges.clear();
     }
 }
 
 fn dijsktra(map: &Map<char>, buf: &mut Buf) -> Option<usize> {
     buf.clear();
-    buf.pq.push((Reverse(0), START));
+    buf.queue.push_back((0, START));
 
     let mut p1 = usize::MAX;
 
-    while let Some((Reverse(cost), cur)) = buf.pq.pop() {
+    while let Some((cost, cur)) = buf.queue.pop_back() {
         if cur == GOAL {
             p1 = cost;
             break;
@@ -68,7 +70,7 @@ fn dijsktra(map: &Map<char>, buf: &mut Buf) -> Option<usize> {
             if cost < lowest {
                 buf.edges.insert(next, cur);
                 buf.costs.insert(next, cost);
-                buf.pq.push((Reverse(cost), next));
+                buf.queue.push_back((cost, next));
             }
         }
     }
