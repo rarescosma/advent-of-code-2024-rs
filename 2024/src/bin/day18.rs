@@ -14,7 +14,6 @@
 use std::{cmp::Reverse, collections::BinaryHeap};
 
 use aoc_2dmap::prelude::{Map, Pos, ORTHOGONAL};
-use aoc_dijsktra::Transform;
 use aoc_prelude::{HashMap, HashSet, Itertools};
 
 const MAP_SIZE: i32 = 71;
@@ -22,26 +21,9 @@ const INIT_BLOCKS: usize = 1024;
 const START: Pos = Pos::c_new(0, 0);
 const GOAL: Pos = Pos::c_new(MAP_SIZE - 1, MAP_SIZE - 1);
 
-#[derive(Copy, Clone, Debug, PartialOrd, PartialEq, Ord, Eq, Hash)]
-struct State {
-    pos: Pos,
-}
-
-impl Transform<State> for Pos {
-    fn cost(&self) -> usize { 1 }
-
-    fn transform(&self, game_state: &State) -> State { State { pos: game_state.pos + *self } }
-}
-
-impl State {
-    fn steps<'a>(&'a self, ctx: &'a Map<char>) -> impl Iterator<Item = Pos> + 'a {
-        ORTHOGONAL.into_iter().filter(|dir| ctx.get(self.pos + *dir) == Some('.'))
-    }
-}
-
 struct Buf {
-    costs: HashMap<State, usize>,
-    pq: BinaryHeap<(Reverse<usize>, State)>,
+    costs: HashMap<Pos, usize>,
+    pq: BinaryHeap<(Reverse<usize>, Pos)>,
     edges: HashMap<Pos, Pos>,
     path: HashSet<Pos>,
 }
@@ -65,27 +47,27 @@ impl Buf {
 
 fn dijsktra(map: &Map<char>, buf: &mut Buf) -> Option<usize> {
     buf.clear();
-    buf.pq.push((Reverse(0), State { pos: START }));
+    buf.pq.push((Reverse(0), START));
 
     let mut p1 = usize::MAX;
 
-    while let Some((Reverse(cost), state)) = buf.pq.pop() {
-        if state.pos == GOAL {
+    while let Some((Reverse(cost), cur)) = buf.pq.pop() {
+        if cur == GOAL {
             p1 = cost;
             break;
         }
-        for step in state.steps(map) {
-            let new_cost = cost + step.cost();
-            let new_state = step.transform(&state);
+        for step in steps(&cur, map) {
+            let cost = cost + 1;
+            let next = cur + step;
 
-            let lowest = *buf.costs.get(&new_state).unwrap_or(&usize::MAX);
-            if new_cost > lowest {
+            let lowest = *buf.costs.get(&next).unwrap_or(&usize::MAX);
+            if cost > lowest {
                 continue;
             }
-            if new_cost < lowest {
-                buf.edges.insert(new_state.pos, state.pos);
-                buf.costs.insert(new_state, new_cost);
-                buf.pq.push((Reverse(new_cost), new_state));
+            if cost < lowest {
+                buf.edges.insert(next, cur);
+                buf.costs.insert(next, cost);
+                buf.pq.push((Reverse(cost), next));
             }
         }
     }
@@ -96,6 +78,11 @@ fn dijsktra(map: &Map<char>, buf: &mut Buf) -> Option<usize> {
 
     backtrack(buf);
     Some(p1)
+}
+
+#[inline(always)]
+fn steps<'a>(cur: &'a Pos, map: &'a Map<char>) -> impl Iterator<Item = Pos> + 'a {
+    ORTHOGONAL.into_iter().filter(|dir| map.get(*cur + *dir) == Some('.'))
 }
 
 // Some if there's a path
