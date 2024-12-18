@@ -11,12 +11,13 @@
 //!
 //! Simplified it in a second iteration to let the Dijkstra loop take care
 //! of resetting the path set whenever a lower cost is found.
+//!
+//! Optimization #2: use two queues instead of a heap to turn Dijsktra into
+//! a glorified BFS that always prefers shooting straight instead of turning.
+//!
+//! Inspiration: https://github.com/maneatingape/advent-of-code-rust/blob/0834bd10ef57be8ed8436d11171d0e9f9c52a1c9/src/year2024/day16.rs
 
-use std::{
-    cmp::Reverse,
-    collections::{BinaryHeap, VecDeque},
-    hash::Hash,
-};
+use std::{collections::VecDeque, hash::Hash};
 
 use aoc_2dmap::prelude::*;
 use aoc_prelude::{HashMap, HashSet, Itertools};
@@ -81,31 +82,42 @@ fn solve() -> (usize, usize) {
     let goal = find_tile(&map, 'E');
 
     let mut p1 = usize::MAX;
-    let mut costs = HashMap::<State, usize>::with_capacity(1000);
-    let mut paths = HashMap::<State, Vec<State>>::with_capacity(1000);
-    let mut pq = BinaryHeap::with_capacity(1024);
-    pq.push((Reverse(0), State { pos: start, dir: Pos::new(1, 0) }));
+    let mut costs = HashMap::<State, usize>::with_capacity(1024);
+    let mut paths = HashMap::<State, Vec<State>>::with_capacity(1024);
 
-    while let Some((Reverse(cost), state)) = pq.pop() {
-        if state.pos == goal {
-            p1 = cost;
-            break;
-        }
-        for step in state.steps(&map) {
-            let new_cost = cost + step.cost();
-            let new_state = step.transform(&state);
+    let mut q_one = VecDeque::with_capacity(512);
+    let mut q_two = VecDeque::with_capacity(512);
+    q_one.push_back((State { pos: start, dir: EAST }, 0));
 
-            let lowest = *costs.get(&new_state).unwrap_or(&usize::MAX);
-            if new_cost > lowest {
-                continue;
+    while !q_one.is_empty() {
+        while let Some((state, cost)) = q_one.pop_front() {
+            if state.pos == goal {
+                p1 = cost;
+                break;
             }
-            if new_cost < lowest {
-                paths.insert(new_state, Vec::new());
-                costs.insert(new_state, new_cost);
+            for step in state.steps(&map) {
+                let new_cost = cost + step.cost();
+                let new_state = step.transform(&state);
+
+                let lowest = *costs.get(&new_state).unwrap_or(&usize::MAX);
+                if new_cost > lowest {
+                    continue;
+                }
+                if new_cost < lowest {
+                    paths.insert(new_state, Vec::new());
+                    costs.insert(new_state, new_cost);
+                }
+                paths.entry(new_state).or_default().push(state);
+
+                // prefer shooting straight than turning
+                if new_state.dir == state.dir {
+                    q_one.push_back((new_state, new_cost));
+                } else {
+                    q_two.push_back((new_state, new_cost));
+                }
             }
-            paths.entry(new_state).or_default().push(state);
-            pq.push((Reverse(new_cost), new_state));
         }
+        (q_one, q_two) = (q_two, q_one);
     }
 
     let mut q = VecDeque::from(ORTHOGONAL.map(|dir| State { pos: goal, dir }));
