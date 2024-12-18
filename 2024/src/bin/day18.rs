@@ -56,14 +56,15 @@ fn dijsktra(map: &Map<char>, buf: &mut Buf) -> Option<usize> {
             p1 = cost;
             break;
         }
-        for step in steps(&cur, map) {
-            let cost = cost + 1;
+        for step in ORTHOGONAL {
             let next = cur + step;
-
-            let lowest = *buf.costs.get(&next).unwrap_or(&usize::MAX);
-            if cost > lowest {
+            if map.get(next) != Some('.') {
                 continue;
             }
+
+            let cost = cost + 1;
+            let lowest = *buf.costs.get(&next).unwrap_or(&usize::MAX);
+
             if cost < lowest {
                 buf.edges.insert(next, cur);
                 buf.costs.insert(next, cost);
@@ -80,16 +81,10 @@ fn dijsktra(map: &Map<char>, buf: &mut Buf) -> Option<usize> {
     Some(p1)
 }
 
-#[inline(always)]
-fn steps<'a>(cur: &'a Pos, map: &'a Map<char>) -> impl Iterator<Item = Pos> + 'a {
-    ORTHOGONAL.into_iter().filter(|dir| map.get(*cur + *dir) == Some('.'))
-}
-
 // Some if there's a path
 fn backtrack(buf: &mut Buf) {
     let mut cur = GOAL;
     buf.path.clear();
-    buf.path.insert(cur);
     while let Some(prev) = buf.edges.get(&cur) {
         buf.path.insert(*prev);
         if *prev == START {
@@ -104,11 +99,9 @@ fn solve() -> (usize, String) {
 
     let blocks = include_str!("../../inputs/18.in")
         .lines()
-        .map(|line| {
+        .filter_map(|line| {
             let mut nums = extract_nums(line);
-            let x = nums.next().unwrap();
-            let y = nums.next().unwrap();
-            Pos::new(x, y)
+            Some(Pos::new(nums.next()?, nums.next()?))
         })
         .collect_vec();
 
@@ -120,16 +113,16 @@ fn solve() -> (usize, String) {
 
     let p1 = dijsktra(&map, &mut buf).expect("no path!?");
 
-    let mut ans = Pos::new(0, 0);
+    let mut choke = None;
     for block in blocks.iter().skip(INIT_BLOCKS) {
         map.set(block, '#');
         if buf.path.contains(block) && dijsktra(&map, &mut buf).is_none() {
-            ans = *block;
+            choke = Some(block);
             break;
         }
     }
 
-    let p2 = format!("{},{}", ans.x, ans.y);
+    let p2 = choke.map(|pos| format!("{},{}", pos.x, pos.y)).expect("no block!?");
 
     (p1, p2)
 }
