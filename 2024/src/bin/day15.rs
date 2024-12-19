@@ -30,7 +30,7 @@ fn solve() -> (i32, i32) {
 
     let mut p2_map = Map::fill((2 * p1_map.size.x, p1_map.size.y), '.');
     for pos in p1_map.iter() {
-        let (tl, tr) = match p1_map.get_unchecked(pos) {
+        let (tl, tr) = match p1_map[pos] {
             '#' => ('#', '#'),
             'O' => ('[', ']'),
             '.' => ('.', '.'),
@@ -79,7 +79,7 @@ fn walk(dirs: &str, start_pos: Pos, buf: &mut Buf) {
         let dxy = ch_to_dir(ch);
 
         let dest = bot + dxy;
-        let tile = buf.map.get_unchecked(dest);
+        let tile = buf.map[dest];
 
         if tile == '.' {
             bot = dest;
@@ -89,10 +89,10 @@ fn walk(dirs: &str, start_pos: Pos, buf: &mut Buf) {
         }
 
         push_set(dest, dxy, buf);
-        if buf.push_set.iter().all(|&pos| buf.map.get_unchecked(pos + dxy) != '#') {
+        if buf.push_set.iter().all(|&pos| buf.map[pos + dxy] != '#') {
             buf.changes.clear();
             for &pos in &buf.push_set {
-                buf.changes.push((pos + dxy, buf.map.get_unchecked(pos)));
+                buf.changes.push((pos + dxy, buf.map[pos]));
                 buf.map.set(pos, '.');
             }
             for &(new_pos, tile) in &buf.changes {
@@ -103,9 +103,7 @@ fn walk(dirs: &str, start_pos: Pos, buf: &mut Buf) {
     }
 }
 
-fn find_bot(map: &Map<char>) -> Pos {
-    map.iter().find(|pos| map.get_unchecked(pos) == '@').unwrap()
-}
+fn find_bot(map: &Map<char>) -> Pos { map.iter().find(|pos| map[pos] == '@').unwrap() }
 
 fn push_set(start_pos: Pos, dy: Pos, buf: &mut Buf) {
     buf.push_set.clear();
@@ -115,7 +113,7 @@ fn push_set(start_pos: Pos, dy: Pos, buf: &mut Buf) {
     buf.queue.push_back(start_pos);
 
     while let Some(pos) = buf.queue.pop_front() {
-        let tile = buf.map.get_unchecked(pos);
+        let tile = buf.map[pos];
         if is_box(tile) {
             buf.push_set.insert(pos);
             buf.queue.push_back(pos + dy)
@@ -130,7 +128,7 @@ fn push_set(start_pos: Pos, dy: Pos, buf: &mut Buf) {
 }
 
 fn tally(map: &Map<char>, box_ch: char) -> i32 {
-    map.iter().filter(|pos| map.get_unchecked(pos) == box_ch).map(|pos| pos.y * 100 + pos.x).sum()
+    map.iter().filter(|pos| map[pos] == box_ch).map(|pos| pos.y * 100 + pos.x).sum()
 }
 
 fn is_box(tile: char) -> bool { tile == 'O' || tile == '[' || tile == ']' }

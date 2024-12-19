@@ -40,7 +40,7 @@ fn solve() -> (usize, usize) {
     let mut buf = Buf::sized::<{ 59 * 59 }>();
 
     map.iter()
-        .filter(|p| map.get_unchecked(p) == 0)
+        .filter(|p| map[p] == 0)
         .map(|p| dfs(p, &map, &mut buf))
         .fold((0, 0), |acc, el| (acc.0 + el.0, acc.1 + el.1))
 }
@@ -56,7 +56,7 @@ fn dfs(start: Pos, map: &Map<u8>, buf: &mut Buf) -> (usize, usize) {
         let idx = (cur.y * map.size.x + cur.x) as usize;
         buf.seen[idx] = true;
 
-        let cur_val = map.get_unchecked(cur);
+        let cur_val = map[cur];
         if cur_val == 9 {
             res += 1;
             buf.ends.insert(cur);

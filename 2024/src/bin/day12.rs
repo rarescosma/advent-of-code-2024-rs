@@ -93,7 +93,7 @@ impl<'a> Explorer<'a> {
                 break;
             }
 
-            let cur_tile = self.map.get_unchecked(self.pos);
+            let cur_tile = self.map[self.pos];
 
             // try to turn right and advance
             let right = self.dir.turn_right();
@@ -150,11 +150,11 @@ fn solve() -> (usize, usize) {
 
         while let Some(cur) = q.pop_front() {
             // R,D,L,U
-            let crop = map.get_unchecked(cur).ch;
+            let crop = map[cur].ch;
 
             for (dir, neigh) in cur.neighbors_rdlu().enumerate() {
-                if !map.within(neigh) || map.get_unchecked(neigh).ch != crop {
-                    let tile = map.get_unchecked_mut_ref(cur);
+                if !map.within(neigh) || map[neigh].ch != crop {
+                    let tile = &mut map[cur];
                     let fence = 1 << dir;
                     tile.fences |= fence;
                     tile.start_dir = fence.turn_left();
@@ -177,7 +177,7 @@ fn count_sides(map: &Map<Tile>, fenced: &mut Region) -> usize {
     let mut sides = 0;
     while !fenced.is_empty() {
         let start_pos = *fenced.iter().next().unwrap();
-        let start_dir = map.get_unchecked(start_pos).start_dir;
+        let start_dir = map[start_pos].start_dir;
         sides += Explorer::new(map, start_pos, start_dir).sides(|pos| {
             fenced.remove(&pos);
         });

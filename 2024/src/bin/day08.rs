@@ -15,7 +15,7 @@ fn solve() -> (usize, usize) {
 
     let mut h_map = BTreeMap::<char, Vec<Pos>>::new();
     for pos in map.iter() {
-        let ch = map.get_unchecked(pos);
+        let ch = map[pos];
         if ch != '.' {
             h_map.entry(ch).or_default().push(pos);
         }

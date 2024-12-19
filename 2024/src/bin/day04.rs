@@ -48,7 +48,7 @@ fn find_str(map: &Map<char>, what: &str) -> usize {
 fn find_p2(map: &Map<char>) -> usize {
     map.iter()
         .filter(|pos| {
-            map.get_unchecked(pos) == 'A'
+            map[pos] == 'A'
                 && pos
                     .neighbors_only_diag()
                     .map(|n| map.get(n))
@@ -58,31 +58,29 @@ fn find_p2(map: &Map<char>) -> usize {
         .count()
 }
 
-fn rotate_90<T: Clone>(map: &Map<T>) -> Map<T> {
+fn rotate_90<T: Copy>(map: &Map<T>) -> Map<T> {
     Map::new(
         (map.size.y, map.size.x),
         (1..=map.size.x).flat_map(|col_idx| map.get_col(map.size.x - col_idx)),
     )
 }
 
-fn rotate_45<T: Clone>(map: &Map<T>, empty: T) -> Map<T> {
+fn rotate_45<T: Copy>(map: &Map<T>, empty: T) -> Map<T> {
     let row_size = map.size.x;
     let mut new_rows = Vec::new();
 
     // up to and including main diagonal
     for y in 0..map.size.y {
-        let mut new_row =
-            diag_iter((0, y).into(), map.size).map(|pos| map.get_unchecked(pos)).collect_vec();
-        new_row.resize(row_size as usize, empty.clone());
+        let mut new_row = diag_iter((0, y).into(), map.size).map(|pos| map[pos]).collect_vec();
+        new_row.resize(row_size as usize, empty);
         new_rows.push(new_row);
     }
 
     // from main diagonal to bottom-right corner
     for x in 1..map.size.x {
-        let mut new_row = diag_iter((x, map.size.y - 1).into(), map.size)
-            .map(|pos| map.get_unchecked(pos))
-            .collect_vec();
-        new_row.resize(row_size as usize, empty.clone());
+        let mut new_row =
+            diag_iter((x, map.size.y - 1).into(), map.size).map(|pos| map[pos]).collect_vec();
+        new_row.resize(row_size as usize, empty);
         new_rows.push(new_row);
     }
 

@@ -43,7 +43,7 @@ fn solve() -> (usize, usize) {
 
     let mut start = Pos::default();
     for pos in map.iter() {
-        if map.get_unchecked(pos) == '^' {
+        if map[pos] == '^' {
             start = pos;
             break;
         }
@@ -81,7 +81,7 @@ fn has_cycle(map: &Map<char>, start: Pos, buffers: &mut Buffers) -> bool {
         if cur.x < 0 || cur.y < 0 || cur.x == map.size.x || cur.y == map.size.y {
             return false;
         }
-        let c = map.get_unchecked(cur);
+        let c = map[cur];
         let hash = ((cur.x * map.size.y + cur.y) * 4) as usize + dir;
         if c == '#' {
             // backtrack + turn right

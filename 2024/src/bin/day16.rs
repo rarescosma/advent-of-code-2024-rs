@@ -142,7 +142,7 @@ fn solve() -> (usize, usize) {
 }
 
 fn find_tile(map: &Map<char>, tile: char) -> Pos {
-    map.iter().find(|pos| map.get_unchecked(pos) == tile).unwrap()
+    map.iter().find(|pos| map[pos] == tile).unwrap()
 }
 
 aoc_2024::main! {
