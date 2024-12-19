@@ -68,11 +68,17 @@ fn eval(a: Int, b: Int, c: Int, program: &[Int]) -> Int {
 }
 
 fn solve() -> (String, Int) {
-    let (regs, ix) = include_str!("../../inputs/17.in").split_once("\n\n").unwrap();
+    let (reg_lines, program_lines) = include_str!("../../inputs/17.in").split_once("\n\n").unwrap();
 
-    let [a, b, c]: [Int; 3] =
-        regs.lines().filter_map(|line| extract_nums(line).next()).collect_vec().try_into().unwrap();
-    let program = extract_nums(ix).collect_vec();
+    let mut regs = [0; 3];
+    reg_lines
+        .lines()
+        .filter_map(|line| extract_nums(line).next())
+        .enumerate()
+        .for_each(|(idx, el)| regs[idx] = el);
+    let [a, b, c] = regs;
+
+    let program = extract_nums(program_lines).collect_vec();
 
     let p1 = format!("{}", eval(a, b, c, &program)).chars().join(",");
 
