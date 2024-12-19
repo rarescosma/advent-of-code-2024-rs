@@ -47,7 +47,7 @@ impl Buf {
     }
 }
 
-fn dijsktra(map: &Map<char>, buf: &mut Buf) -> Option<usize> {
+fn dfs(map: &Map<char>, buf: &mut Buf) -> Option<usize> {
     buf.clear();
     buf.queue.push_back((0, START));
 
@@ -83,7 +83,7 @@ fn dijsktra(map: &Map<char>, buf: &mut Buf) -> Option<usize> {
     Some(p1)
 }
 
-// Some if there's a path
+// updates buf.path to the shortest path
 fn backtrack(buf: &mut Buf) {
     let mut cur = GOAL;
     buf.path.clear();
@@ -113,12 +113,12 @@ fn solve() -> (usize, String) {
 
     let mut buf = Buf::default();
 
-    let p1 = dijsktra(&map, &mut buf).expect("no path!?");
+    let p1 = dfs(&map, &mut buf).expect("no path!?");
 
     let mut choke = None;
     for block in blocks.iter().skip(INIT_BLOCKS) {
         map.set(block, '#');
-        if buf.path.contains(block) && dijsktra(&map, &mut buf).is_none() {
+        if buf.path.contains(block) && dfs(&map, &mut buf).is_none() {
             choke = Some(block);
             break;
         }
