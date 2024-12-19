@@ -11,57 +11,58 @@
 //! take slices of the remaining string and check if they're in the pattern
 //! set.
 //!
-//! Optimization #2: don't need no queue to recurse, we can simply walk the towel
-//! from start to end and build the `ways` array as we go.
+//! Optimization #2: don't need no queue to recurse, we can simply walk the design
+//! from start to end and build the `tally` array as we go.
 
 use aoc_prelude::HashSet;
 
 const MAX_SIZE: usize = 64;
 
+type PatternSet<'a> = HashSet<&'a [u8]>;
+
 struct Counter<'a> {
-    patterns: &'a HashSet<&'a str>,
+    patterns: PatternSet<'a>,
     max_len: usize,
-    cache: [usize; MAX_SIZE],
+    tally: [u64; MAX_SIZE],
 }
 
 impl<'a> Counter<'a> {
-    fn new(patterns: &'a HashSet<&'a str>) -> Self {
+    fn new(patterns: PatternSet<'a>) -> Self {
         let max_len = patterns.iter().map(|p| p.len()).max().expect("no patterns");
-        Self { patterns, max_len, cache: [0; MAX_SIZE] }
+        Self { patterns, max_len, tally: [0; MAX_SIZE] }
     }
 
-    fn num_arrangements(&mut self, towel: &str) -> usize {
-        let size = towel.len();
-        let ways = &mut self.cache;
-        ways.fill(0);
-        ways[0] = 1;
+    fn count_ways(&mut self, design: &[u8]) -> u64 {
+        let size = design.len();
+        let tally = &mut self.tally;
+        tally.fill(0);
+        tally[0] = 1;
 
         for start in 0..size {
-            if ways[start] > 0 {
+            if tally[start] > 0 {
                 for pat_len in 1..=self.max_len.min(size - start) {
                     let end = start + pat_len;
-                    if self.patterns.contains(&towel[start..end]) {
-                        ways[end] += ways[start];
+                    if self.patterns.contains(&design[start..end]) {
+                        tally[end] += tally[start];
                     }
                 }
             }
         }
 
-        ways[size]
+        tally[size]
     }
 }
 
-fn solve() -> (usize, usize) {
-    let (parts, towels) = include_str!("../../inputs/19.in").split_once("\n\n").unwrap();
+fn solve() -> (u64, u64) {
+    let (patterns, designs) = include_str!("../../inputs/19.in").split_once("\n\n").unwrap();
 
-    let parts: HashSet<_> = parts.split(", ").collect();
-    let mut counter = Counter::new(&parts);
+    let mut counter = Counter::new(patterns.split(", ").map(str::as_bytes).collect());
 
-    towels
+    designs
         .lines()
         .map(|towel| {
-            let ans = counter.num_arrangements(towel);
-            ((ans > 0) as usize, ans)
+            let ans = counter.count_ways(towel.as_bytes());
+            ((ans > 0) as u64, ans)
         })
         .fold((0, 0), |acc, cur| (acc.0 + cur.0, acc.1 + cur.1))
 }
