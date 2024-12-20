@@ -13,7 +13,7 @@ use aoc_2dmap::prelude::*;
 use rayon::prelude::*;
 
 const MAP_SIZE: usize = 141;
-const MAX_CHEAT: usize = 20;
+const MAX_CHEAT: i32 = 20;
 const MIN_SAVING: u32 = 100;
 
 struct Buf {
@@ -97,9 +97,7 @@ fn find_cheats(pos: Pos, costs: &[u32], on_path: &[bool]) -> (usize, usize) {
                 continue;
             }
 
-            let mut offset = Pos::new(x_off, y_off);
-
-            for _ in 0..4 {
+            for offset in rotations(x_off, y_off) {
                 let new_pos = pos + offset;
 
                 if in_bounds(new_pos) {
@@ -112,8 +110,6 @@ fn find_cheats(pos: Pos, costs: &[u32], on_path: &[bool]) -> (usize, usize) {
                         p2 += 1;
                     }
                 }
-
-                offset = offset.clockwise();
             }
         }
     }
@@ -121,16 +117,21 @@ fn find_cheats(pos: Pos, costs: &[u32], on_path: &[bool]) -> (usize, usize) {
 }
 
 #[inline(always)]
-fn in_bounds(pos: Pos) -> bool {
-    pos.x > 0 && pos.y > 0 && pos.x < (MAP_SIZE as i32) && pos.y < (MAP_SIZE as i32)
+fn find_tile(map: &Map<char>, tile: char) -> Pos {
+    map.iter().find(|pos| map[pos] == tile).unwrap()
 }
 
 #[inline(always)]
 fn index(pos: Pos) -> usize { (pos.y as usize) * MAP_SIZE + (pos.x as usize) }
 
 #[inline(always)]
-fn find_tile(map: &Map<char>, tile: char) -> Pos {
-    map.iter().find(|pos| map[pos] == tile).unwrap()
+fn rotations(x: i32, y: i32) -> [Pos; 4] {
+    [Pos::new(x, y), Pos::new(-y, x), Pos::new(-x, -y), Pos::new(y, -x)]
+}
+
+#[inline(always)]
+fn in_bounds(pos: Pos) -> bool {
+    pos.x > 0 && pos.y > 0 && pos.x < (MAP_SIZE as i32) && pos.y < (MAP_SIZE as i32)
 }
 
 aoc_2024::main! {
