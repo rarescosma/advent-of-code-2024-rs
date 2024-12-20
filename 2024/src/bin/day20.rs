@@ -18,7 +18,6 @@ const MIN_SAVING: u32 = 100;
 
 struct Buf {
     costs: Vec<u32>,
-    queue: VecDeque<(u32, Pos)>,
     path: Vec<Pos>,
     on_path: Vec<bool>,
 }
@@ -27,7 +26,6 @@ impl Default for Buf {
     fn default() -> Self {
         Self {
             costs: vec![u32::MAX; MAP_SIZE * MAP_SIZE],
-            queue: VecDeque::with_capacity(1024),
             path: Vec::with_capacity(10000),
             on_path: vec![false; MAP_SIZE * MAP_SIZE],
         }
@@ -36,6 +34,7 @@ impl Default for Buf {
 
 fn solve() -> (usize, usize) {
     let input = include_str!("../../inputs/20.in");
+
     let map_size = Pos::from((
         input.chars().position(|x| x == '\n').unwrap(),
         input.chars().filter(|x| *x == '\n').count(),
@@ -47,77 +46,87 @@ fn solve() -> (usize, usize) {
     map.set(goal, '.');
     map.set(start, '.');
 
-    let mut buf = Buf::default();
-
-    dfs(&map, &mut buf, start, goal);
-    find_shunts(buf)
-}
-
-fn find_shunts(buf: Buf) -> (usize, usize) {
+    let buf = dfs(&map, start, goal);
     buf.path
         .into_par_iter()
-        .map(|pos| {
-            let mut p2 = 0;
-            let mut p1 = 0;
-            for x_off in 1..=MAX_CHEAT {
-                for y_off in 0..=(MAX_CHEAT - x_off) {
-                    if x_off + y_off <= 1 {
-                        continue;
-                    }
-                    let mut offset = Pos::new(x_off, y_off);
-                    for _ in 0..4 {
-                        let new_pos = pos + offset;
-                        if new_pos.x > 0
-                            && new_pos.y > 0
-                            && new_pos.x < (MAP_SIZE as i32)
-                            && new_pos.y < (MAP_SIZE as i32)
-                        {
-                            let idx = index(new_pos);
-                            let dist = (x_off + y_off) as u32;
-                            if buf.on_path[idx]
-                                && buf.costs[idx] + dist + MIN_SAVING <= buf.costs[index(pos)]
-                            {
-                                p2 += 1;
-                                if dist == 2 {
-                                    p1 += 1;
-                                }
-                            }
-                        }
-                        offset = offset.clockwise();
-                    }
-                }
-            }
-            (p1, p2)
-        })
+        .map(|pos| find_cheats(pos, &buf.costs, &buf.on_path))
         .reduce(|| (0, 0), |acc, val| (acc.0 + val.0, acc.1 + val.1))
 }
 
-fn dfs(map: &Map<char>, buf: &mut Buf, start: Pos, goal: Pos) {
-    buf.queue.push_back((0, start));
+fn dfs(map: &Map<char>, start: Pos, goal: Pos) -> Buf {
+    let mut buf = Buf::default();
+    let mut queue = VecDeque::with_capacity(1024);
+    queue.push_back((0, start));
 
-    while let Some((cost, cur)) = buf.queue.pop_back() {
+    while let Some((cost, cur)) = queue.pop_back() {
         buf.costs[index(cur)] = cost;
         buf.path.push(cur);
         buf.on_path[index(cur)] = true;
+
         if cur == goal {
-            return;
+            return buf;
         }
+
         for step in ORTHOGONAL {
             let next = cur + step;
+
             if map.get(next) != Some('.') {
                 continue;
             }
 
             let idx = index(next);
+
             if buf.costs[idx] == u32::MAX {
-                buf.queue.push_back((cost + 1, next));
+                queue.push_back((cost + 1, next));
             }
         }
     }
+    buf
+}
+
+fn find_cheats(pos: Pos, costs: &[u32], on_path: &[bool]) -> (usize, usize) {
+    let mut p1 = 0;
+    let mut p2 = 0;
+
+    let cur_idx = index(pos);
+
+    for x_off in 1..=MAX_CHEAT {
+        for y_off in 0..=(MAX_CHEAT - x_off) {
+            let dist = (x_off + y_off) as u32;
+            if dist < 2 {
+                continue;
+            }
+
+            let mut offset = Pos::new(x_off, y_off);
+
+            for _ in 0..4 {
+                let new_pos = pos + offset;
+
+                if in_bounds(new_pos) {
+                    let new_idx = index(new_pos);
+
+                    if on_path[new_idx] && costs[new_idx] + dist + MIN_SAVING <= costs[cur_idx] {
+                        if dist == 2 {
+                            p1 += 1;
+                        }
+                        p2 += 1;
+                    }
+                }
+
+                offset = offset.clockwise();
+            }
+        }
+    }
+    (p1, p2)
 }
 
 #[inline(always)]
-fn index(p: Pos) -> usize { (p.y as usize) * MAP_SIZE + (p.x as usize) }
+fn in_bounds(pos: Pos) -> bool {
+    pos.x > 0 && pos.y > 0 && pos.x < (MAP_SIZE as i32) && pos.y < (MAP_SIZE as i32)
+}
+
+#[inline(always)]
+fn index(pos: Pos) -> usize { (pos.y as usize) * MAP_SIZE + (pos.x as usize) }
 
 #[inline(always)]
 fn find_tile(map: &Map<char>, tile: char) -> Pos {
