@@ -17,16 +17,16 @@ const MAX_CHEAT: i32 = 20;
 const MIN_SAVING: u32 = 100;
 
 struct Buf {
-    costs: Vec<u32>,
     path: Vec<Pos>,
+    costs: Vec<u32>,
     on_path: Vec<bool>,
 }
 
 impl Default for Buf {
     fn default() -> Self {
         Self {
-            costs: vec![u32::MAX; MAP_SIZE * MAP_SIZE],
             path: Vec::with_capacity(10000),
+            costs: vec![u32::MAX; MAP_SIZE * MAP_SIZE],
             on_path: vec![false; MAP_SIZE * MAP_SIZE],
         }
     }
@@ -46,14 +46,14 @@ fn solve() -> (usize, usize) {
     map.set(start, '.');
     map.set(goal, '.');
 
-    let buf = dfs(&map, start, goal);
+    let buf = dfs(&map, start, goal).expect("no path!?");
     buf.path
         .into_par_iter()
         .map(|pos| find_cheats(pos, &buf.costs, &buf.on_path))
         .reduce(|| (0, 0), |acc, val| (acc.0 + val.0, acc.1 + val.1))
 }
 
-fn dfs(map: &Map<char>, start: Pos, goal: Pos) -> Buf {
+fn dfs(map: &Map<char>, start: Pos, goal: Pos) -> Option<Buf> {
     let mut buf = Buf::default();
     let mut queue = VecDeque::with_capacity(1024);
     queue.push_back((0, start));
@@ -64,7 +64,7 @@ fn dfs(map: &Map<char>, start: Pos, goal: Pos) -> Buf {
         buf.on_path[index(cur)] = true;
 
         if cur == goal {
-            return buf;
+            return Some(buf);
         }
 
         for step in ORTHOGONAL {
@@ -81,7 +81,7 @@ fn dfs(map: &Map<char>, start: Pos, goal: Pos) -> Buf {
             }
         }
     }
-    buf
+    None
 }
 
 fn find_cheats(pos: Pos, costs: &[u32], on_path: &[bool]) -> (usize, usize) {
