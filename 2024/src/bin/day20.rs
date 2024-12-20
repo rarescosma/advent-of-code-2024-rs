@@ -14,11 +14,11 @@ use rayon::prelude::*;
 
 const MAP_SIZE: usize = 141;
 const MAX_CHEAT: i32 = 20;
-const MIN_SAVING: u32 = 100;
+const MIN_SAVING: i32 = 100;
 
 struct Buf {
     path: Vec<Pos>,
-    costs: Vec<u32>,
+    costs: Vec<i32>,
     on_path: Vec<bool>,
 }
 
@@ -26,7 +26,7 @@ impl Default for Buf {
     fn default() -> Self {
         Self {
             path: Vec::with_capacity(10000),
-            costs: vec![u32::MAX; MAP_SIZE * MAP_SIZE],
+            costs: vec![i32::MAX; MAP_SIZE * MAP_SIZE],
             on_path: vec![false; MAP_SIZE * MAP_SIZE],
         }
     }
@@ -59,8 +59,8 @@ fn dfs(map: &Map<char>, start: Pos, goal: Pos) -> Option<Buf> {
     queue.push_back((0, start));
 
     while let Some((cost, cur)) = queue.pop_back() {
-        buf.costs[index(cur)] = cost;
         buf.path.push(cur);
+        buf.costs[index(cur)] = cost;
         buf.on_path[index(cur)] = true;
 
         if cur == goal {
@@ -76,7 +76,7 @@ fn dfs(map: &Map<char>, start: Pos, goal: Pos) -> Option<Buf> {
 
             let idx = index(next);
 
-            if buf.costs[idx] == u32::MAX {
+            if buf.costs[idx] == i32::MAX {
                 queue.push_back((cost + 1, next));
             }
         }
@@ -84,7 +84,7 @@ fn dfs(map: &Map<char>, start: Pos, goal: Pos) -> Option<Buf> {
     None
 }
 
-fn find_cheats(pos: Pos, costs: &[u32], on_path: &[bool]) -> (usize, usize) {
+fn find_cheats(pos: Pos, costs: &[i32], on_path: &[bool]) -> (usize, usize) {
     let mut p1 = 0;
     let mut p2 = 0;
 
@@ -92,7 +92,7 @@ fn find_cheats(pos: Pos, costs: &[u32], on_path: &[bool]) -> (usize, usize) {
 
     for x_off in 1..=MAX_CHEAT {
         for y_off in 0..=(MAX_CHEAT - x_off) {
-            let dist = (x_off + y_off) as u32;
+            let dist = x_off + y_off;
             if dist < 2 {
                 continue;
             }
