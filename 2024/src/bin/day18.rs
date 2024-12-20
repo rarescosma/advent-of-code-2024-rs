@@ -108,7 +108,7 @@ fn solve() -> (usize, String) {
         .collect_vec();
 
     for block in blocks.iter().take(INIT_BLOCKS) {
-        map.set(block, '#');
+        map[block] = '#';
     }
 
     let mut buf = Buf::default();
@@ -117,7 +117,7 @@ fn solve() -> (usize, String) {
 
     let mut choke = None;
     for block in blocks.iter().skip(INIT_BLOCKS) {
-        map.set(block, '#');
+        map[block] = '#';
         if buf.path.contains(block) && dfs(&map, &mut buf).is_none() {
             choke = Some(block);
             break;

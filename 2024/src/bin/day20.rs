@@ -43,8 +43,8 @@ fn solve() -> (usize, usize) {
 
     let start = find_tile(&map, 'S');
     let goal = find_tile(&map, 'E');
-    map.set(start, '.');
-    map.set(goal, '.');
+    map[start] = '.';
+    map[goal] = '.';
 
     let buf = dfs(&map, start, goal).expect("no path!?");
     buf.path

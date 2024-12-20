@@ -37,13 +37,13 @@ fn solve() -> (i32, i32) {
             '@' => ('@', '.'),
             _ => continue,
         };
-        p2_map.set(Pos::new(2 * pos.x, pos.y), tl);
-        p2_map.set(Pos::new(2 * pos.x + 1, pos.y), tr);
+        p2_map[Pos::new(2 * pos.x, pos.y)] = tl;
+        p2_map[Pos::new(2 * pos.x + 1, pos.y)] = tr;
     }
     let p2_bot = find_bot(&p2_map);
 
-    p1_map.set(p1_bot, '.');
-    p2_map.set(p2_bot, '.');
+    p1_map[p1_bot] = '.';
+    p2_map[p2_bot] = '.';
 
     let mut buf = Buf {
         map: p1_map,
@@ -93,10 +93,10 @@ fn walk(dirs: &str, start_pos: Pos, buf: &mut Buf) {
             buf.changes.clear();
             for &pos in &buf.push_set {
                 buf.changes.push((pos + dxy, buf.map[pos]));
-                buf.map.set(pos, '.');
+                buf.map[pos] = '.';
             }
             for &(new_pos, tile) in &buf.changes {
-                buf.map.set(new_pos, tile);
+                buf.map[new_pos] = tile;
             }
             bot = dest;
         }

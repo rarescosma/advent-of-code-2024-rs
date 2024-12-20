@@ -59,11 +59,11 @@ fn solve() -> (usize, usize) {
 
         let cand = Pos::from((x, y));
         if map.get(cand) == Some('.') {
-            map.set(cand, '#');
+            map[cand] = '#';
             if has_cycle(&map, start, &mut buffers) {
                 p2 += 1;
             }
-            map.set(cand, 'b');
+            map[cand] = 'b';
         }
     }
 
