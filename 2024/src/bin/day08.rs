@@ -54,10 +54,12 @@ fn antinodes(a1: &Pos, a2: &Pos, map_size: &MapSize, p1_buf: &mut [bool], p2_buf
     }
 }
 
+#[inline]
 fn within(p: &Pos, map_size: &MapSize) -> bool {
     p.x >= 0 && p.x < map_size.x && p.y >= 0 && p.y < map_size.y
 }
 
+#[inline]
 fn index(p: &Pos, map_size: &MapSize) -> usize { (p.y * map_size.x + p.x) as usize }
 
 aoc_2024::main! {

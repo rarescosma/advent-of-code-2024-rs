@@ -9,20 +9,6 @@ use std::ops::Sub;
 
 use aoc_prelude::HashMap;
 
-fn read_input() -> (Vec<i32>, Vec<i32>) {
-    let mut l1 = Vec::new();
-    let mut l2 = Vec::new();
-
-    include_str!("../../inputs/01.in").lines().for_each(|line| {
-        let mut it = line.split_whitespace();
-
-        l1.push(it.next().unwrap().parse().unwrap());
-        l2.push(it.next().unwrap().parse().unwrap());
-    });
-
-    (l1, l2)
-}
-
 fn solve() -> (i32, i32) {
     let (mut left, mut right) = read_input();
     left.sort_unstable();
@@ -38,6 +24,20 @@ fn solve() -> (i32, i32) {
     let p2 = left.iter().fold(0, |acc, e| acc + e * freq.get(e).unwrap_or(&0));
 
     (p1, p2)
+}
+
+fn read_input() -> (Vec<i32>, Vec<i32>) {
+    let mut l1 = Vec::new();
+    let mut l2 = Vec::new();
+
+    include_str!("../../inputs/01.in").lines().for_each(|line| {
+        let mut it = line.split_whitespace();
+
+        l1.push(it.next().unwrap().parse().unwrap());
+        l2.push(it.next().unwrap().parse().unwrap());
+    });
+
+    (l1, l2)
 }
 
 aoc_2024::main! {

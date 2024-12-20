@@ -47,6 +47,39 @@ impl Buf {
     }
 }
 
+fn solve() -> (usize, String) {
+    let mut map = Map::<char>::fill((MAP_SIZE, MAP_SIZE), '.');
+
+    let blocks = include_str!("../../inputs/18.in")
+        .lines()
+        .filter_map(|line| {
+            let mut nums = extract_nums(line);
+            Some(Pos::new(nums.next()?, nums.next()?))
+        })
+        .collect_vec();
+
+    for block in blocks.iter().take(INIT_BLOCKS) {
+        map[block] = '#';
+    }
+
+    let mut buf = Buf::default();
+
+    let p1 = dfs(&map, &mut buf).expect("no path!?");
+
+    let mut choke = None;
+    for block in blocks.iter().skip(INIT_BLOCKS) {
+        map[block] = '#';
+        if buf.path.contains(block) && dfs(&map, &mut buf).is_none() {
+            choke = Some(block);
+            break;
+        }
+    }
+
+    let p2 = choke.map(|pos| format!("{},{}", pos.x, pos.y)).expect("no block!?");
+
+    (p1, p2)
+}
+
 fn dfs(map: &Map<char>, buf: &mut Buf) -> Option<usize> {
     buf.clear();
     buf.queue.push_back((0, START));
@@ -94,39 +127,6 @@ fn backtrack(buf: &mut Buf) {
         }
         cur = *prev;
     }
-}
-
-fn solve() -> (usize, String) {
-    let mut map = Map::<char>::fill((MAP_SIZE, MAP_SIZE), '.');
-
-    let blocks = include_str!("../../inputs/18.in")
-        .lines()
-        .filter_map(|line| {
-            let mut nums = extract_nums(line);
-            Some(Pos::new(nums.next()?, nums.next()?))
-        })
-        .collect_vec();
-
-    for block in blocks.iter().take(INIT_BLOCKS) {
-        map[block] = '#';
-    }
-
-    let mut buf = Buf::default();
-
-    let p1 = dfs(&map, &mut buf).expect("no path!?");
-
-    let mut choke = None;
-    for block in blocks.iter().skip(INIT_BLOCKS) {
-        map[block] = '#';
-        if buf.path.contains(block) && dfs(&map, &mut buf).is_none() {
-            choke = Some(block);
-            break;
-        }
-    }
-
-    let p2 = choke.map(|pos| format!("{},{}", pos.x, pos.y)).expect("no block!?");
-
-    (p1, p2)
 }
 
 #[inline]

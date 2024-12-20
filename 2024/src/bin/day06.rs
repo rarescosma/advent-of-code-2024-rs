@@ -11,10 +11,6 @@
 use aoc_2dmap::prelude::*;
 use aoc_prelude::num_integer::Integer;
 
-fn turn_right(dir: usize) -> usize { (dir + 1) % 4 }
-
-fn turn_back(dir: usize) -> usize { (dir + 2) % 4 }
-
 struct Buffers {
     states: Vec<bool>,
     visited_pos: Vec<bool>,
@@ -98,6 +94,12 @@ fn has_cycle(map: &Map<char>, start: Pos, buffers: &mut Buffers) -> bool {
         buffers.visited_pos[(cur.x * map.size.y + cur.y) as usize] = true;
     }
 }
+
+#[inline]
+fn turn_right(dir: usize) -> usize { (dir + 1) % 4 }
+
+#[inline]
+fn turn_back(dir: usize) -> usize { (dir + 2) % 4 }
 
 aoc_2024::main! {
     solve()

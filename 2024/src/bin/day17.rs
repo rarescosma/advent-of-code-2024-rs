@@ -25,6 +25,44 @@ type Int = u64;
 
 const BLOCK_SIZE: Int = 3;
 
+fn solve() -> (String, Int) {
+    let (reg_lines, program_lines) = include_str!("../../inputs/17.in").split_once("\n\n").unwrap();
+
+    let mut regs = [0; 3];
+    reg_lines
+        .lines()
+        .filter_map(|line| extract_nums(line).next())
+        .enumerate()
+        .for_each(|(idx, el)| regs[idx] = el);
+    let [a, b, c] = regs;
+
+    let program = extract_nums(program_lines).collect_vec();
+
+    let p1 = format!("{}", eval(a, b, c, &program)).chars().join(",");
+
+    let target = program.iter().fold(0, |acc, digit| acc * 10 + digit);
+
+    let mut a_candidates = vec![0];
+    let mut next_a_candidates = Vec::with_capacity(16);
+
+    for digit in 0..=target.ilog10() {
+        let look_for = target % Int::pow(10, digit + 1);
+        next_a_candidates.clear();
+        for msbs in a_candidates.iter().map(|bits| *bits << BLOCK_SIZE) {
+            next_a_candidates.extend(
+                (0..1 << BLOCK_SIZE)
+                    .map(|lsbs| msbs + lsbs)
+                    .filter(|&a| eval(a, b, c, &program) == look_for),
+            );
+        }
+        mem::swap(&mut a_candidates, &mut next_a_candidates);
+    }
+
+    let p2 = a_candidates.into_iter().min().expect("no solution?!");
+
+    (p1, p2)
+}
+
 fn eval(a: Int, b: Int, c: Int, program: &[Int]) -> Int {
     let (mut a, mut b, mut c) = (a, b, c);
 
@@ -65,44 +103,6 @@ fn eval(a: Int, b: Int, c: Int, program: &[Int]) -> Int {
             ip += 2;
         }
     }
-}
-
-fn solve() -> (String, Int) {
-    let (reg_lines, program_lines) = include_str!("../../inputs/17.in").split_once("\n\n").unwrap();
-
-    let mut regs = [0; 3];
-    reg_lines
-        .lines()
-        .filter_map(|line| extract_nums(line).next())
-        .enumerate()
-        .for_each(|(idx, el)| regs[idx] = el);
-    let [a, b, c] = regs;
-
-    let program = extract_nums(program_lines).collect_vec();
-
-    let p1 = format!("{}", eval(a, b, c, &program)).chars().join(",");
-
-    let target = program.iter().fold(0, |acc, digit| acc * 10 + digit);
-
-    let mut a_candidates = vec![0];
-    let mut next_a_candidates = Vec::with_capacity(16);
-
-    for digit in 0..=target.ilog10() {
-        let look_for = target % Int::pow(10, digit + 1);
-        next_a_candidates.clear();
-        for msbs in a_candidates.iter().map(|bits| *bits << BLOCK_SIZE) {
-            next_a_candidates.extend(
-                (0..1 << BLOCK_SIZE)
-                    .map(|lsbs| msbs + lsbs)
-                    .filter(|&a| eval(a, b, c, &program) == look_for),
-            );
-        }
-        mem::swap(&mut a_candidates, &mut next_a_candidates);
-    }
-
-    let p2 = a_candidates.into_iter().min().expect("no solution?!");
-
-    (p1, p2)
 }
 
 #[inline]

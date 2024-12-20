@@ -6,12 +6,10 @@
 //! using a `HashMap`.
 use std::cmp::Ordering;
 
-fn make_map<const N: usize>() -> [[bool; N]; N] { [[false; N]; N] }
-
 fn solve() -> (usize, usize) {
     let (ord, rep) = include_str!("../../inputs/05.in").split_once("\n\n").unwrap();
 
-    let mut before_set = make_map::<100>();
+    let mut before_set = [[false; 100]; 100];
 
     ord.lines().for_each(|line| {
         let (left, right) = line.split_once('|').unwrap();
