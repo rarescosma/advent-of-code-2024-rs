@@ -70,14 +70,12 @@ fn dfs(map: &Map<char>, start: Pos, goal: Pos) -> Option<Buf> {
         for step in ORTHOGONAL {
             let next = cur + step;
 
-            if map.get(next) != Some('.') {
-                continue;
-            }
+            if map.get(next) == Some('.') {
+                let idx = index(next);
 
-            let idx = index(next);
-
-            if buf.costs[idx] == i32::MAX {
-                queue.push_back((cost + 1, next));
+                if buf.costs[idx] == i32::MAX {
+                    queue.push_back((cost + 1, next));
+                }
             }
         }
     }
@@ -90,9 +88,13 @@ fn find_cheats(pos: Pos, costs: &[i32], on_path: &[bool]) -> (usize, usize) {
 
     let cur_idx = index(pos);
 
+    // generate the Manhattan rhomboid of radius MAX_CHEAT around `pos`
     for x_off in 1..=MAX_CHEAT {
         for y_off in 0..=(MAX_CHEAT - x_off) {
             let dist = x_off + y_off;
+
+            // prune the first layer - cheat size of 1 is not really a cheat,
+            // the DFS will go there anyway
             if dist < 2 {
                 continue;
             }
