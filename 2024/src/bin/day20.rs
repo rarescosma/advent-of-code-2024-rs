@@ -10,6 +10,7 @@
 use std::collections::VecDeque;
 
 use aoc_2dmap::prelude::*;
+use rayon::prelude::*;
 
 const MAP_SIZE: usize = 141;
 const MAX_CHEAT: usize = 20;
@@ -49,44 +50,46 @@ fn solve() -> (usize, usize) {
     let mut buf = Buf::default();
 
     dfs(&map, &mut buf, start, goal);
-
-    find_shunts(&buf)
+    find_shunts(buf)
 }
 
-fn find_shunts(buf: &Buf) -> (usize, usize) {
-    let mut p2 = 0;
-    let mut p1 = 0;
-    for pos in &buf.path {
-        for x_off in 1..=MAX_CHEAT {
-            for y_off in 0..=(MAX_CHEAT - x_off) {
-                if x_off + y_off <= 1 {
-                    continue;
-                }
-                let mut offset = Pos::new(x_off, y_off);
-                for _ in 0..4 {
-                    let new_pos = *pos + offset;
-                    if new_pos.x > 0
-                        && new_pos.y > 0
-                        && new_pos.x < (MAP_SIZE as i32)
-                        && new_pos.y < (MAP_SIZE as i32)
-                    {
-                        let idx = index(new_pos);
-                        let dist = (x_off + y_off) as u32;
-                        if buf.on_path[idx]
-                            && buf.costs[idx] + dist + MIN_SAVING <= buf.costs[index(*pos)]
+fn find_shunts(buf: Buf) -> (usize, usize) {
+    buf.path
+        .into_par_iter()
+        .map(|pos| {
+            let mut p2 = 0;
+            let mut p1 = 0;
+            for x_off in 1..=MAX_CHEAT {
+                for y_off in 0..=(MAX_CHEAT - x_off) {
+                    if x_off + y_off <= 1 {
+                        continue;
+                    }
+                    let mut offset = Pos::new(x_off, y_off);
+                    for _ in 0..4 {
+                        let new_pos = pos + offset;
+                        if new_pos.x > 0
+                            && new_pos.y > 0
+                            && new_pos.x < (MAP_SIZE as i32)
+                            && new_pos.y < (MAP_SIZE as i32)
                         {
-                            p2 += 1;
-                            if dist == 2 {
-                                p1 += 1;
+                            let idx = index(new_pos);
+                            let dist = (x_off + y_off) as u32;
+                            if buf.on_path[idx]
+                                && buf.costs[idx] + dist + MIN_SAVING <= buf.costs[index(pos)]
+                            {
+                                p2 += 1;
+                                if dist == 2 {
+                                    p1 += 1;
+                                }
                             }
                         }
+                        offset = offset.clockwise();
                     }
-                    offset = offset.clockwise();
                 }
             }
-        }
-    }
-    (p1, p2)
+            (p1, p2)
+        })
+        .reduce(|| (0, 0), |acc, val| (acc.0 + val.0, acc.1 + val.1))
 }
 
 fn dfs(map: &Map<char>, buf: &mut Buf, start: Pos, goal: Pos) {
