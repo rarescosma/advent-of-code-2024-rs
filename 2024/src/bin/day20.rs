@@ -41,10 +41,10 @@ fn solve() -> (usize, usize) {
     ));
     let mut map = Map::new(map_size, input.chars().filter(|&c| c != '\n'));
 
-    let goal = find_tile(&map, 'E');
     let start = find_tile(&map, 'S');
-    map.set(goal, '.');
+    let goal = find_tile(&map, 'E');
     map.set(start, '.');
+    map.set(goal, '.');
 
     let buf = dfs(&map, start, goal);
     buf.path
