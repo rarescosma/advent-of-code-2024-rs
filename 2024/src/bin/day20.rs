@@ -19,16 +19,11 @@ const MIN_SAVING: i32 = 100;
 struct Buf {
     path: Vec<Pos>,
     costs: Vec<i32>,
-    on_path: Vec<bool>,
 }
 
 impl Default for Buf {
     fn default() -> Self {
-        Self {
-            path: Vec::with_capacity(10000),
-            costs: vec![i32::MAX; MAP_SIZE * MAP_SIZE],
-            on_path: vec![false; MAP_SIZE * MAP_SIZE],
-        }
+        Self { path: Vec::with_capacity(10000), costs: vec![-1; MAP_SIZE * MAP_SIZE] }
     }
 }
 
@@ -49,7 +44,7 @@ fn solve() -> (usize, usize) {
     let buf = dfs(&map, start, goal).expect("no path!?");
     buf.path
         .into_par_iter()
-        .map(|pos| find_cheats(pos, &buf.costs, &buf.on_path))
+        .map(|pos| find_cheats(pos, &buf.costs))
         .reduce(|| (0, 0), |acc, val| (acc.0 + val.0, acc.1 + val.1))
 }
 
@@ -60,8 +55,7 @@ fn dfs(map: &Map<char>, start: Pos, goal: Pos) -> Option<Buf> {
 
     while let Some((cost, cur)) = queue.pop_back() {
         buf.path.push(cur);
-        buf.costs[index(cur)] = cost;
-        buf.on_path[index(cur)] = true;
+        buf.costs[index(&cur)] = cost;
 
         if cur == goal {
             return Some(buf);
@@ -71,9 +65,9 @@ fn dfs(map: &Map<char>, start: Pos, goal: Pos) -> Option<Buf> {
             let next = cur + step;
 
             if map.get(next) == Some('.') {
-                let idx = index(next);
+                let idx = index(&next);
 
-                if buf.costs[idx] == i32::MAX {
+                if buf.costs[idx] == -1 {
                     queue.push_back((cost + 1, next));
                 }
             }
@@ -82,11 +76,11 @@ fn dfs(map: &Map<char>, start: Pos, goal: Pos) -> Option<Buf> {
     None
 }
 
-fn find_cheats(pos: Pos, costs: &[i32], on_path: &[bool]) -> (usize, usize) {
+fn find_cheats(pos: Pos, costs: &[i32]) -> (usize, usize) {
     let mut p1 = 0;
     let mut p2 = 0;
 
-    let cur_idx = index(pos);
+    let cur_idx = index(&pos);
 
     // generate the Manhattan rhomboid of radius MAX_CHEAT around `pos`
     for x_off in 1..=MAX_CHEAT {
@@ -102,10 +96,11 @@ fn find_cheats(pos: Pos, costs: &[i32], on_path: &[bool]) -> (usize, usize) {
             for offset in rotations(x_off, y_off) {
                 let new_pos = pos + offset;
 
-                if in_bounds(new_pos) {
-                    let new_idx = index(new_pos);
+                if in_bounds(&new_pos) {
+                    let new_idx = index(&new_pos);
 
-                    if on_path[new_idx] && costs[new_idx] + dist + MIN_SAVING <= costs[cur_idx] {
+                    if costs[new_idx] != -1 && costs[new_idx] + dist + MIN_SAVING <= costs[cur_idx]
+                    {
                         if dist == 2 {
                             p1 += 1;
                         }
@@ -124,7 +119,7 @@ fn find_tile(map: &Map<char>, tile: char) -> Pos {
 }
 
 #[inline(always)]
-fn index(pos: Pos) -> usize { (pos.y as usize) * MAP_SIZE + (pos.x as usize) }
+fn index(pos: &Pos) -> usize { (pos.y as usize) * MAP_SIZE + (pos.x as usize) }
 
 #[inline(always)]
 fn rotations(x: i32, y: i32) -> [Pos; 4] {
@@ -132,7 +127,7 @@ fn rotations(x: i32, y: i32) -> [Pos; 4] {
 }
 
 #[inline(always)]
-fn in_bounds(pos: Pos) -> bool {
+fn in_bounds(pos: &Pos) -> bool {
     pos.x > 0 && pos.y > 0 && pos.x < (MAP_SIZE as i32) && pos.y < (MAP_SIZE as i32)
 }
 
