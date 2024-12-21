@@ -16,6 +16,7 @@ use aoc_prelude::{HashMap, Itertools};
 type TrMap = Vec<Vec<Transition>>;
 
 const MAX_KEYS: u8 = 11;
+
 const UP: u8 = 1;
 const LEFT: u8 = 2;
 const DOWN: u8 = 3;
@@ -45,9 +46,9 @@ impl Transition {
         self.offsets()
             .map(|o| match (o.x, o.y) {
                 (0, -1) => UP,
+                (-1, 0) => LEFT,
                 (0, 1) => DOWN,
                 (1, 0) => RIGHT,
-                (-1, 0) => LEFT,
                 _ => panic!(),
             })
             .chain(once(ENTER))
@@ -172,9 +173,9 @@ fn sequence_length(
     tr_map: &TrMap,
     cache: &mut HashMap<(u64, u64), u64>,
 ) -> u64 {
-    let mut key: u64 = 0;
     // We've got maximum 14 arrow + 'A' key presses after the first stage
     // and each key value is represented on 4 bits.
+    let mut key: u64 = 0;
     for ch in seq {
         key = (key << 4) ^ (*ch as u64)
     }
@@ -189,8 +190,9 @@ fn sequence_length(
         .zip(seq)
         .map(|(from_b, &to_b)| {
             let tx = &tr_map[tr_key(from_b, to_b)];
+
             if depth == 1 {
-                (tx[0].num_moves as u64) + 1
+                (tx[0].num_moves as u64) + 1 // base Transitions don't include the final 'A'
             } else {
                 tx.iter()
                     .map(|t| sequence_length(&t.as_bytes().collect_vec(), depth - 1, tr_map, cache))
@@ -216,9 +218,9 @@ fn num_repr(c: char) -> u8 {
 fn arrow_repr(c: char) -> u8 {
     match c {
         '^' => UP,
+        '<' => LEFT,
         'v' => DOWN,
         '>' => RIGHT,
-        '<' => LEFT,
         'A' => ENTER,
         _ => panic!(),
     }
