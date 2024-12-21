@@ -17,9 +17,9 @@ type TrMap = Vec<Vec<Transition>>;
 
 const MAX_KEYS: u8 = 11;
 const UP: u8 = 1;
-const DOWN: u8 = 2;
-const RIGHT: u8 = 3;
-const LEFT: u8 = 4;
+const LEFT: u8 = 2;
+const DOWN: u8 = 3;
+const RIGHT: u8 = 4;
 const ENTER: u8 = 5;
 
 #[derive(Copy, Clone, Debug)]
@@ -55,7 +55,9 @@ impl Transition {
 
     fn offsets(&self) -> impl Iterator<Item = Pos> + '_ {
         (0..self.num_moves).map(|n| {
-            let base_idx = (((self.sequence >> n) & 1) == 0) as usize;
+            // 0 selects the 1nd base (Y-axis)
+            // 1 selects the 2nd base (X-axis)
+            let base_idx = ((self.sequence >> n) & 1) as usize;
             self.bases[base_idx]
         })
     }
@@ -79,13 +81,13 @@ fn solve() -> (u64, u64) {
                 .min()
                 .unwrap();
 
-            let min_len_26 = sequences
+            let min_len_25 = sequences
                 .iter()
                 .map(|s| sequence_length(s, 25, &arrow_transitions, &mut cache))
                 .min()
                 .unwrap();
 
-            (num * min_len_2, num * min_len_26)
+            (num * min_len_2, num * min_len_25)
         })
         .fold((0, 0), |acc, cur| (acc.0 + cur.0, acc.1 + cur.1));
 
@@ -97,31 +99,34 @@ fn make_tr_map<F: Fn(char) -> u8>(pad: &Map<char>, repr_fn: F) -> TrMap {
 
     for from_pos in pad.iter() {
         let from_ch = pad[from_pos];
+
         if from_ch == '.' {
             continue;
         }
+
         for to_pos in pad.iter() {
             let to_ch = pad[to_pos];
+
             if to_ch == '.' {
                 continue;
             }
 
             let bases = (to_pos - from_pos).signum();
-            let num_moves = (to_pos.x - from_pos.x).abs() + (to_pos.y - from_pos.y).abs();
             let num_x = (to_pos.x - from_pos.x).unsigned_abs();
+            let num_moves = (num_x + (to_pos.y - from_pos.y).unsigned_abs()) as u8;
 
             for sequence in 0..=((1u8 << num_moves) - 1) {
                 if sequence.count_ones() == num_x {
                     // We have a number whose 1 bits indicate a move on the X axis
                     // and whose 0 bits indicate a move on the Y axis
                     let transition = Transition {
-                        bases: [Pos::new(bases.x, 0), Pos::new(0, bases.y)],
-                        num_moves: num_moves as _,
+                        bases: [Pos::new(0, bases.y), Pos::new(bases.x, 0)],
+                        num_moves,
                         sequence,
                     };
+
                     if transition.is_valid(pad, from_pos) {
-                        transitions[(repr_fn(from_ch) * MAX_KEYS + repr_fn(to_ch)) as usize]
-                            .push(transition)
+                        transitions[tr_key(repr_fn(from_ch), repr_fn(to_ch))].push(transition)
                     }
                 }
             }
@@ -135,14 +140,16 @@ fn possible_sequences<F: Fn(char) -> u8>(
     tr_map: &TrMap,
     repr_fn: F,
 ) -> Vec<Vec<u8>> {
-    let mut goal_i = 0;
-    let mut paths = vec![Vec::new()];
-    let mut new_paths = vec![Vec::new()];
-    let mut cur_key = 'A';
+    let (mut paths, mut new_paths) = (vec![Vec::new()], vec![Vec::new()]);
+
+    let (mut goal_i, mut cur_ch) = (0, 'A');
+
     while goal_i < goal.len() {
-        let key = (repr_fn(cur_key) * MAX_KEYS + repr_fn(goal[goal_i])) as usize;
+        let key = tr_key(repr_fn(cur_ch), repr_fn(goal[goal_i]));
         let transitions = &tr_map[key];
+
         new_paths.clear();
+
         for transition in transitions {
             for path in &paths {
                 let mut new_path = path.clone();
@@ -150,8 +157,10 @@ fn possible_sequences<F: Fn(char) -> u8>(
                 new_paths.push(new_path);
             }
         }
+
         mem::swap(&mut paths, &mut new_paths);
-        cur_key = goal[goal_i];
+
+        cur_ch = goal[goal_i];
         goal_i += 1;
     }
     paths
@@ -165,7 +174,7 @@ fn sequence_length(
 ) -> u64 {
     let mut key: u64 = 0;
     // We've got maximum 14 arrow + 'A' key presses after the first stage
-    // and each key is representable on 4 bits.
+    // and each key value is represented on 4 bits.
     for ch in seq {
         key = (key << 4) ^ (*ch as u64)
     }
@@ -178,8 +187,8 @@ fn sequence_length(
     let ret = once(ENTER)
         .chain(seq.iter().copied())
         .zip(seq)
-        .map(|(from_ch, &to_ch)| {
-            let tx = &tr_map[(from_ch * MAX_KEYS + to_ch) as usize];
+        .map(|(from_b, &to_b)| {
+            let tx = &tr_map[tr_key(from_b, to_b)];
             if depth == 1 {
                 (tx[0].num_moves as u64) + 1
             } else {
@@ -214,6 +223,9 @@ fn arrow_repr(c: char) -> u8 {
         _ => panic!(),
     }
 }
+
+#[inline]
+fn tr_key(from_b: u8, to_b: u8) -> usize { (from_b * MAX_KEYS + to_b) as _ }
 
 #[inline]
 fn extract_nums(s: &str) -> impl Iterator<Item = u32> + '_ {
