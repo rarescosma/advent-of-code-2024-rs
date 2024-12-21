@@ -14,6 +14,7 @@ use aoc_2dmap::prelude::{Map, Pos};
 use aoc_prelude::{HashMap, Itertools};
 
 type TrMap = Vec<Vec<Transition>>;
+type Int = u64;
 
 const MAX_KEYS: u8 = 11;
 
@@ -64,7 +65,7 @@ impl Transition {
     }
 }
 
-fn solve() -> (u64, u64) {
+fn solve() -> (Int, Int) {
     let num_transitions = make_tr_map(&Map::new((3, 4), "789456123.0A".chars()), num_repr);
     let arrow_transitions = make_tr_map(&Map::new((3, 2), ".^A<v>".chars()), arrow_repr);
 
@@ -90,7 +91,9 @@ fn solve() -> (u64, u64) {
 
             (num * min_len_2, num * min_len_25)
         })
-        .fold((0, 0), |acc, cur| (acc.0 + cur.0, acc.1 + cur.1));
+        .fold((0, 0), |acc: (Int, Int), cur| {
+            (acc.0.checked_add(cur.0).unwrap(), acc.1.checked_add(cur.1).unwrap())
+        });
 
     (p1, p2)
 }
@@ -171,8 +174,8 @@ fn sequence_length(
     seq: &[u8],
     depth: u64,
     tr_map: &TrMap,
-    cache: &mut HashMap<(u64, u64), u64>,
-) -> u64 {
+    cache: &mut HashMap<(u64, u64), Int>,
+) -> Int {
     // We've got maximum 14 arrow + 'A' key presses after the first stage
     // and each key value is represented on 4 bits.
     let mut key: u64 = 0;
@@ -192,7 +195,7 @@ fn sequence_length(
             let tx = &tr_map[tr_key(from_b, to_b)];
 
             if depth == 1 {
-                (tx[0].num_moves as u64) + 1 // base Transitions don't include the final 'A'
+                (tx[0].num_moves as Int) + 1 // base Transitions don't include the final 'A'
             } else {
                 tx.iter()
                     .map(|t| sequence_length(&t.as_bytes().collect_vec(), depth - 1, tr_map, cache))
