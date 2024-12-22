@@ -48,7 +48,7 @@ fn hash(n: Int) -> Int {
     let mut n = n;
 
     n = (n ^ n << 6) & MOD;
-    n = (n ^ n >> 5) & MOD;
+    n = n ^ n >> 5;
     (n ^ n << 11) & MOD
 }
 
