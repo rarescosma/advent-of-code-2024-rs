@@ -70,10 +70,10 @@ fn process_chunk(chunk: &[Int]) -> (Int, Map) {
             let new_p = n % 10;
             let delta = new_p - p;
             if j < 4 {
-                key[j] = delta as i8;
+                key[j] = (delta + 9) as i8;
             } else {
                 (key[0], key[1], key[2]) = (key[1], key[2], key[3]);
-                key[3] = delta as i8;
+                key[3] = (delta + 9) as i8;
                 let idx = index(key);
                 if seen[idx] != buyer_id {
                     seen[idx] = buyer_id;
@@ -88,10 +88,10 @@ fn process_chunk(chunk: &[Int]) -> (Int, Map) {
 }
 
 fn index(key: Key) -> usize {
-    let mut idx = (key[3] + 9) as usize;
-    idx = 19 * idx + (key[2] + 9) as usize;
-    idx = 19 * idx + (key[1] + 9) as usize;
-    19 * idx + (key[0] + 9) as usize
+    let mut idx = key[3] as usize;
+    idx = 19 * idx + key[2] as usize;
+    idx = 19 * idx + key[1] as usize;
+    19 * idx + key[0] as usize
 }
 
 aoc_2024::main! {
