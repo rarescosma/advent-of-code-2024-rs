@@ -1,3 +1,5 @@
+use std::str::FromStr;
+
 /// Macro for solution timing
 /// Credits: <https://github.com/AxlLind>/
 #[macro_export]
@@ -16,4 +18,9 @@ macro_rules! main {
       }
     }
   }
+}
+
+#[inline]
+pub fn extract_nums<'a, T: FromStr + 'a>(s: &'a str) -> impl Iterator<Item = T> + 'a {
+    s.split(|c: char| !c.is_ascii_digit()).filter(|s| !s.is_empty()).flat_map(str::parse::<T>)
 }

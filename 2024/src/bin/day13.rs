@@ -12,9 +12,9 @@ fn solve() -> (Int, Int) {
         .split("\n\n")
         .filter_map(|lines| {
             let mut lines = lines.lines();
-            let e0 = extract_nums(lines.next()?)?;
-            let e1 = extract_nums(lines.next()?)?;
-            let r = extract_nums(lines.next()?)?;
+            let e0 = extract_pair(lines.next()?)?;
+            let e1 = extract_pair(lines.next()?)?;
+            let r = extract_pair(lines.next()?)?;
             Some((
                 solve_eq(e0, e1, r).map(token_total),
                 solve_eq(e0, e1, (r.0 + 10000000000000, r.1 + 10000000000000)).map(token_total),
@@ -26,11 +26,8 @@ fn solve() -> (Int, Int) {
 }
 
 #[inline]
-fn extract_nums(s: &str) -> Option<Pair> {
-    let mut it = s
-        .split(|c: char| !c.is_ascii_digit())
-        .filter(|s| !s.is_empty())
-        .flat_map(str::parse::<Int>);
+fn extract_pair(s: &str) -> Option<Pair> {
+    let mut it = aoc_2024::extract_nums(s);
     Some((it.next()?, it.next()?))
 }
 

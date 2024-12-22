@@ -20,6 +20,7 @@
 use std::mem;
 
 use aoc_prelude::Itertools;
+use aoc_2024::extract_nums;
 
 type Int = u64;
 
@@ -103,11 +104,6 @@ fn eval(a: Int, b: Int, c: Int, program: &[Int]) -> Int {
             ip += 2;
         }
     }
-}
-
-#[inline]
-fn extract_nums(s: &str) -> impl Iterator<Item = Int> + '_ {
-    s.split(|c: char| !c.is_ascii_digit()).filter(|s| !s.is_empty()).flat_map(str::parse::<Int>)
 }
 
 aoc_2024::main! {

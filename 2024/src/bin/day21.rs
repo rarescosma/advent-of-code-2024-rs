@@ -12,6 +12,7 @@ use std::{iter::once, mem};
 
 use aoc_2dmap::prelude::{Map, Pos};
 use aoc_prelude::{HashMap, Itertools};
+use aoc_2024::extract_nums;
 
 type TrMap = Vec<Vec<Transition>>;
 type Int = u64;
@@ -73,7 +74,7 @@ fn solve() -> (Int, Int) {
     let (p1, p2) = include_str!("../../inputs/21.in")
         .lines()
         .map(|line| {
-            let num = extract_nums(line).next().unwrap() as u64;
+            let num = extract_nums::<u64>(line).next().unwrap();
             let goal = line.chars().collect_vec();
             let sequences = possible_sequences(&goal, &num_transitions, num_repr);
 
@@ -231,11 +232,6 @@ fn arrow_repr(c: char) -> u8 {
 
 #[inline]
 fn tr_key(from_b: u8, to_b: u8) -> usize { (from_b * MAX_KEYS + to_b) as _ }
-
-#[inline]
-fn extract_nums(s: &str) -> impl Iterator<Item = u32> + '_ {
-    s.split(|c: char| !c.is_ascii_digit()).filter(|s| !s.is_empty()).flat_map(str::parse::<u32>)
-}
 
 aoc_2024::main! {
     solve()

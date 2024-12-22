@@ -17,6 +17,7 @@ use std::collections::VecDeque;
 
 use aoc_2dmap::prelude::{Map, Pos, ORTHOGONAL};
 use aoc_prelude::{HashMap, HashSet, Itertools};
+use aoc_2024::extract_nums;
 
 const MAP_SIZE: i32 = 71;
 const INIT_BLOCKS: usize = 1024;
@@ -53,7 +54,7 @@ fn solve() -> (usize, String) {
     let blocks = include_str!("../../inputs/18.in")
         .lines()
         .filter_map(|line| {
-            let mut nums = extract_nums(line);
+            let mut nums = extract_nums::<i32>(line);
             Some(Pos::new(nums.next()?, nums.next()?))
         })
         .collect_vec();
@@ -127,11 +128,6 @@ fn backtrack(buf: &mut Buf) {
         }
         cur = *prev;
     }
-}
-
-#[inline]
-fn extract_nums(s: &str) -> impl Iterator<Item = i32> + '_ {
-    s.split(|c: char| !c.is_ascii_digit()).filter(|s| !s.is_empty()).flat_map(str::parse::<i32>)
 }
 
 aoc_2024::main! {
