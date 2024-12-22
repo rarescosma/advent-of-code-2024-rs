@@ -27,21 +27,21 @@ fn solve() -> (Int, u16) {
     let input = include_str!("../../inputs/22.in");
     let nums = input.lines().filter_map(|l| extract_nums(l).next()).collect_vec();
 
+    let total = AtomicU64::new(0);
     let tally = Mutex::new([0u16; NUM_KEYS]);
-    let p1 = AtomicU64::new(0);
 
     nums.chunks((nums.len() / available_parallelism().unwrap().get()) + 1)
         .par_bridge()
         .map(process_chunk)
-        .for_each(|(total, res)| {
+        .for_each(|(chunk_total, chunk_tally)| {
             let mut tally = tally.lock().unwrap();
             for (idx, el) in tally.iter_mut().enumerate() {
-                *el += res[idx];
+                *el += chunk_tally[idx];
             }
-            p1.fetch_add(total, Ordering::Relaxed);
+            total.fetch_add(chunk_total, Ordering::Relaxed);
         });
 
-    (p1.load(Ordering::Relaxed), tally.into_inner().unwrap().into_iter().max().unwrap())
+    (total.load(Ordering::Relaxed), tally.into_inner().unwrap().into_iter().max().unwrap())
 }
 
 fn hash(n: Int) -> Int {
@@ -54,7 +54,7 @@ fn hash(n: Int) -> Int {
 
 fn process_chunk(chunk: &[Int]) -> (Int, Map) {
     let mut total = 0;
-    let mut res = [0u16; NUM_KEYS];
+    let mut tally = [0u16; NUM_KEYS];
     let mut seen = [u16::MAX; NUM_KEYS];
 
     for (buyer_id, initial) in chunk.iter().enumerate() {
@@ -77,14 +77,14 @@ fn process_chunk(chunk: &[Int]) -> (Int, Map) {
                 let idx = index(key);
                 if seen[idx] != buyer_id {
                     seen[idx] = buyer_id;
-                    res[idx] += new_p as u16;
+                    tally[idx] += new_p as u16;
                 }
             }
             p = new_p;
         }
         total += n;
     }
-    (total, res)
+    (total, tally)
 }
 
 fn index(key: Key) -> usize {
