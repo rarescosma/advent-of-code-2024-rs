@@ -1,51 +1,47 @@
 //! # Monkey Market
 //!
-//! Description.
+//! Fancy brute-force with rayon parallelism + updating the chunk tally as
+//! we go. Hashmaps replaced with flat arrays, indexed by four -9 <-> +9
+//! integers.
 
-use std::thread::available_parallelism;
+use std::{
+    sync::{
+        atomic::{AtomicU64, Ordering},
+        Mutex,
+    },
+    thread::available_parallelism,
+};
 
-use aoc_prelude::{HashMap, HashSet, Itertools};
 use aoc_2024::extract_nums;
+use aoc_prelude::Itertools;
 use rayon::prelude::*;
 
-type Int = i64;
-type Key = [i8; 4];
-type Map = HashMap<Key, Int>;
-
 const MOD: Int = (1 << 24) - 1;
+const NUM_KEYS: usize = 19usize.pow(4);
 
-fn solve() -> (Int, Int) {
+type Int = u64;
+type Key = [i8; 4];
+type Map = [u16; NUM_KEYS];
+
+fn solve() -> (Int, u16) {
     let input = include_str!("../../inputs/22.in");
     let nums = input.lines().filter_map(|l| extract_nums(l).next()).collect_vec();
 
-    let p1 = nums
-        .iter()
-        .map(|n| {
-            let mut n = *n;
-            for _ in 0..2000 {
-                n = hash(n);
-            }
-            n
-        })
-        .sum();
+    let tally = Mutex::new([0u16; NUM_KEYS]);
+    let p1 = AtomicU64::new(0);
 
-    let maps = nums
-        .chunks((nums.len() / available_parallelism().unwrap().get()) + 1)
+    nums.chunks((nums.len() / available_parallelism().unwrap().get()) + 1)
         .par_bridge()
         .map(process_chunk)
-        .collect::<Vec<_>>();
+        .for_each(|(total, res)| {
+            let mut tally = tally.lock().unwrap();
+            for (idx, el) in tally.iter_mut().enumerate() {
+                *el += res[idx];
+            }
+            p1.fetch_add(total, Ordering::Relaxed);
+        });
 
-    let all_keys = maps.iter().flat_map(|m| m.keys()).collect::<HashSet<_>>();
-
-    let p2 = all_keys
-        .into_iter()
-        .collect_vec()
-        .into_par_iter()
-        .map(|k| (k, maps.iter().filter_map(|m| m.get(k)).sum::<Int>()))
-        .max_by_key(|x| x.1)
-        .unwrap();
-
-    (p1, p2.1)
+    (p1.load(Ordering::Relaxed), tally.into_inner().unwrap().into_iter().max().unwrap())
 }
 
 fn hash(n: Int) -> Int {
@@ -56,34 +52,46 @@ fn hash(n: Int) -> Int {
     (n ^ n << 11) & MOD
 }
 
-fn process_chunk(chunk: &[Int]) -> Map {
-    let mut res = HashMap::new();
-    let mut seen = HashMap::new();
+fn process_chunk(chunk: &[Int]) -> (Int, Map) {
+    let mut total = 0;
+    let mut res = [0u16; NUM_KEYS];
+    let mut seen = [u16::MAX; NUM_KEYS];
 
     for (buyer_id, initial) in chunk.iter().enumerate() {
+        let buyer_id = buyer_id as u16;
+
         let mut p = initial % 10;
         let mut n = *initial;
 
-        let mut key = Key::default();
+        let mut key = [0; 4];
 
         for j in 0..2000 {
             n = hash(n);
             let new_p = n % 10;
             let delta = new_p - p;
-            p = new_p;
             if j < 4 {
                 key[j] = delta as i8;
             } else {
                 (key[0], key[1], key[2]) = (key[1], key[2], key[3]);
                 key[3] = delta as i8;
-                if seen.get(&key) != Some(&buyer_id) {
-                    seen.insert(key, buyer_id);
-                    *res.entry(key).or_insert(0) += new_p;
+                let idx = index(key);
+                if seen[idx] != buyer_id {
+                    seen[idx] = buyer_id;
+                    res[idx] += new_p as u16;
                 }
             }
+            p = new_p;
         }
+        total += n;
     }
-    res
+    (total, res)
+}
+
+fn index(key: Key) -> usize {
+    let mut idx = (key[3] + 9) as usize;
+    idx = 19 * idx + (key[2] + 9) as usize;
+    idx = 19 * idx + (key[1] + 9) as usize;
+    19 * idx + (key[0] + 9) as usize
 }
 
 aoc_2024::main! {
