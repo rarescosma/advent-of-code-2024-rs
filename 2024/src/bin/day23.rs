@@ -2,51 +2,49 @@
 //!
 //! Brute force is still a thing.
 
-use std::{collections::BTreeSet, sync::Mutex};
+use std::{
+    hash::Hash,
+    sync::atomic::{AtomicUsize, Ordering},
+};
 
 use aoc_prelude::{lazy_static, Entry, HashMap, HashSet, Itertools};
-use rayon::prelude::*;
+
+const MAX_NODES: usize = 26 * 26;
 
 lazy_static! {
-    static ref COUNTER: Mutex<u16> = Mutex::new(0);
+    static ref COUNTER: AtomicUsize = AtomicUsize::new(0);
 }
 
-fn idx<'a>(node: &'a str, cache: &mut HashMap<&'a str, u16>) -> u16 {
-    match cache.entry(node) {
-        Entry::Occupied(idx) => *idx.get(),
-        Entry::Vacant(entry) => {
-            let mut cnt = COUNTER.lock().unwrap();
-            let idx = *cnt;
-            entry.insert(idx);
-            *cnt += 1;
-            idx
-        }
+struct Graph {
+    edges: [[bool; MAX_NODES]; MAX_NODES],
+    nodes: HashMap<usize, Vec<usize>>,
+}
+
+impl Graph {
+    fn default() -> Self {
+        Self { edges: [[false; MAX_NODES]; MAX_NODES], nodes: HashMap::with_capacity(MAX_NODES) }
+    }
+
+    fn add_edge(&mut self, from: usize, to: usize) {
+        self.edges[from][to] = true;
+        self.edges[to][from] = true;
+
+        self.nodes.entry(from).or_default().push(to);
+        self.nodes.entry(to).or_default().push(from);
     }
 }
 
 fn solve() -> (usize, String) {
-    let mut idx_cache = HashMap::new();
+    let mut name_to_idx = HashMap::new();
+    let mut idx = |s| idx(s, &mut name_to_idx);
 
+    let mut graph = Graph::default();
     let mut tee_nodes = HashSet::new();
 
-    let mut ix = |s| idx(s, &mut idx_cache);
-
-    let lines = include_str!("../../inputs/23.in").lines().collect_vec();
-    lines.iter().for_each(|line| {
-        let (fr, to) = line.split_once("-").unwrap();
-        ix(fr);
-        ix(to);
-    });
-
-    let num_nodes = *COUNTER.lock().unwrap() as usize;
-    let mut adj = vec![vec![false; num_nodes]; num_nodes];
-
-    lines.into_iter().for_each(|l| {
+    include_str!("../../inputs/23.in").lines().for_each(|l| {
         let (fr, to) = l.split_once("-").unwrap();
-        let fr_idx = ix(fr) as usize;
-        let to_idx = ix(to) as usize;
-        adj[fr_idx][to_idx] = true;
-        adj[to_idx][fr_idx] = true;
+        let (fr_idx, to_idx) = (idx(fr), idx(to));
+        graph.add_edge(fr_idx, to_idx);
 
         if fr.starts_with("t") {
             tee_nodes.insert(fr_idx);
@@ -56,51 +54,81 @@ fn solve() -> (usize, String) {
         }
     });
 
-    let mut init = HashSet::new();
-    for i in 0..num_nodes {
-        for j in i + 1..num_nodes {
-            for k in j + 1..num_nodes {
-                if adj[i][j] && adj[i][k] && adj[j][k] {
-                    init.insert(BTreeSet::from([i, j, k]));
+    let p1 = count_triples(&graph, &tee_nodes);
+
+    let idx_to_name = reverse(name_to_idx);
+
+    let p2 = max_clique(&graph).iter().map(|idx| idx_to_name[idx]).sorted_unstable().join(",");
+
+    (p1, p2)
+}
+
+fn idx<'a>(node: &'a str, cache: &mut HashMap<&'a str, usize>) -> usize {
+    match cache.entry(node) {
+        Entry::Occupied(idx) => *idx.get(),
+        Entry::Vacant(entry) => {
+            let idx = COUNTER.load(Ordering::Relaxed);
+            COUNTER.fetch_add(1, Ordering::Relaxed);
+            entry.insert(idx);
+            idx
+        }
+    }
+}
+
+fn reverse<K, V: Eq + Hash>(h: HashMap<K, V>) -> HashMap<V, K> {
+    h.into_iter().map(|(k, v)| (v, k)).collect()
+}
+
+fn count_triples(graph: &Graph, tee_nodes: &HashSet<usize>) -> usize {
+    let mut seen = [false; MAX_NODES];
+    let mut p1 = 0;
+
+    for n1 in 0..MAX_NODES {
+        if let Some(neighbours) = graph.nodes.get(&n1) {
+            seen[n1] = true;
+
+            for (i, &n2) in neighbours.iter().enumerate() {
+                for &n3 in neighbours.iter().skip(i) {
+                    if !seen[n2]
+                        && !seen[n3]
+                        && graph.edges[n2][n3]
+                        && (tee_nodes.contains(&n1)
+                            || tee_nodes.contains(&n2)
+                            || tee_nodes.contains(&n3))
+                    {
+                        p1 += 1;
+                    }
                 }
             }
         }
     }
-    let p1 = init.iter().filter(|sg| sg.iter().any(|n| tee_nodes.contains(n))).collect_vec().len();
+    p1
+}
 
-    loop {
-        let new = init
-            .iter()
-            .par_bridge()
-            .flat_map(|comp| {
-                let mut next = Vec::new();
+fn max_clique(graph: &Graph) -> Vec<usize> {
+    let mut seen = [false; MAX_NODES];
+    let mut clique = Vec::new();
+    let mut max_clique = Vec::new();
 
-                for node in 0..num_nodes {
-                    if comp.contains(&node) {
-                        continue;
-                    }
-                    if comp.iter().all(|&n| adj[n][node]) {
-                        let mut next_comp = comp.clone();
-                        next_comp.insert(node);
-                        next.push(next_comp);
-                    }
+    for (&n1, neighbours) in &graph.nodes {
+        if !seen[n1] {
+            clique.clear();
+            clique.push(n1);
+
+            for &n2 in neighbours {
+                if clique.iter().all(|&c| graph.edges[c][n2]) {
+                    seen[n2] = true;
+                    clique.push(n2);
                 }
-                next
-            })
-            .collect::<Vec<_>>();
+            }
 
-        if new.is_empty() {
-            break;
+            if clique.len() > max_clique.len() {
+                max_clique.clone_from(&clique);
+            }
         }
-        init = HashSet::from_iter(new);
     }
 
-    let idx_to_name =
-        idx_cache.clone().into_iter().map(|(k, v)| (v as usize, k)).collect::<HashMap<_, _>>();
-
-    let p2 = init.into_iter().next().unwrap().iter().map(|idx| idx_to_name[idx]).sorted().join(",");
-
-    (p1, p2)
+    max_clique
 }
 
 aoc_2024::main! {
