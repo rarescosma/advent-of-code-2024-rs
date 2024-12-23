@@ -67,8 +67,7 @@ fn idx<'a>(node: &'a str, cache: &mut HashMap<&'a str, usize>) -> usize {
     match cache.entry(node) {
         Entry::Occupied(idx) => *idx.get(),
         Entry::Vacant(entry) => {
-            let idx = COUNTER.load(Ordering::Relaxed);
-            COUNTER.fetch_add(1, Ordering::Relaxed);
+            let idx = COUNTER.fetch_add(1, Ordering::Relaxed);
             entry.insert(idx);
             idx
         }
