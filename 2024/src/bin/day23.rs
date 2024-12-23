@@ -36,14 +36,15 @@ impl Graph {
 
 fn solve() -> (usize, String) {
     let mut name_to_idx = HashMap::new();
-    let mut idx = |s| idx(s, &mut name_to_idx);
 
     let mut graph = Graph::default();
     let mut tee_nodes = HashSet::new();
 
     include_str!("../../inputs/23.in").lines().for_each(|l| {
         let (fr, to) = l.split_once("-").unwrap();
-        let (fr_idx, to_idx) = (idx(fr), idx(to));
+
+        let (fr_idx, to_idx) = (idx(fr, &mut name_to_idx), idx(to, &mut name_to_idx));
+
         graph.add_edge(fr_idx, to_idx);
 
         if fr.starts_with("t") {
@@ -109,15 +110,15 @@ fn max_clique(graph: &Graph) -> Vec<usize> {
     let mut clique = Vec::new();
     let mut max_clique = Vec::new();
 
-    for (&n1, neighbours) in &graph.nodes {
-        if !seen[n1] {
+    for (&cur, neighs) in &graph.nodes {
+        if !seen[cur] {
             clique.clear();
-            clique.push(n1);
+            clique.push(cur);
 
-            for &n2 in neighbours {
-                if clique.iter().all(|&c| graph.edges[c][n2]) {
-                    seen[n2] = true;
-                    clique.push(n2);
+            for &neigh in neighs {
+                if clique.iter().all(|&c| graph.edges[c][neigh]) {
+                    seen[neigh] = true;
+                    clique.push(neigh);
                 }
             }
 
