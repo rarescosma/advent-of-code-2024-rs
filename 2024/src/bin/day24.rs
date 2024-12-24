@@ -11,6 +11,8 @@ use aoc_prelude::Itertools;
 
 type Circuit<'a> = BTreeMap<&'a str, Gate<'a>>;
 
+type Signals<'a> = BTreeMap<&'a str, u8>;
+
 #[derive(Debug, Clone, Copy)]
 enum GateKind {
     Or,
@@ -97,18 +99,16 @@ impl<'a> Gate<'a> {
 fn solve() -> (u64, String) {
     let (inputs, gates) = include_str!("../../inputs/24.in").split_once("\n\n").unwrap();
 
-    let mut signals = inputs
+    let mut signals: Signals = inputs
         .lines()
         .filter_map(|line| line.split_once(": "))
-        .map(|(name, val)| (name, extract_nums::<u8>(val).next().unwrap()))
-        .collect::<BTreeMap<_, _>>();
-
+        .filter_map(|(name, val)| Some((name, extract_nums::<u8>(val).next()?)))
+        .collect();
     let gates = gates.lines().filter_map(Gate::parse).collect_vec();
 
     let mut circuit: Circuit = gates.iter().copied().map(|g| (g.out, g)).collect();
 
     let mut stack = VecDeque::from_iter(gates.into_iter().filter(|g| g.out.starts_with("z")));
-
     while let Some(out) = stack.pop_front() {
         match out.eval(&signals) {
             None => {
@@ -123,14 +123,12 @@ fn solve() -> (u64, String) {
     }
 
     let mut p1 = 0u64;
-    for (name, sig) in signals.iter().sorted().rev() {
-        if name.starts_with("z") {
-            p1 = (p1 << 1) | (*sig as u64);
-        }
+    for k in signals.keys().filter(|k| k.starts_with("z")).sorted().rev() {
+        p1 = (p1 << 1) | (signals[k] as u64);
     }
 
     let mut swaps = Vec::new();
-    swap(&mut circuit, "vss", "z14", &mut swaps);
+    swap(&mut circuit, "z14", "vss", &mut swaps);
     swap(&mut circuit, "z31", "kpp", &mut swaps);
     swap(&mut circuit, "z35", "sgj", &mut swaps);
     swap(&mut circuit, "hjf", "kdh", &mut swaps);
@@ -149,7 +147,7 @@ fn swap<'b, 'a: 'b>(circuit: &mut Circuit, a: &'a str, b: &'a str, swaps: &'b mu
 }
 
 #[allow(dead_code)]
-fn is_valid(otg: &BTreeMap<&str, Gate>) -> bool {
+fn is_valid(otg: &Circuit) -> bool {
     otg.keys().clone().filter(|k| k.starts_with("z")).sorted_unstable().all(|k| {
         let z_index = extract_nums::<u8>(k).next().unwrap();
         let formula = otg[k].repr(otg);
