@@ -118,7 +118,7 @@ impl Signal {
     }
 }
 
-#[derive(Debug, Clone, Copy, Default)]
+#[derive(Copy, Clone, Debug, Default)]
 enum GateKind {
     #[default]
     Or,
@@ -182,16 +182,15 @@ fn solve() -> (u64, String) {
             state.circuit[id] = gate;
         });
 
-    inputs
-        .lines()
-        .filter_map(|line| {
+    inputs.lines().for_each(|line| {
+        if let Some((sig_ref, val)) = (|| {
             let (name, val) = line.split_once(": ")?;
             let sig_ref = register_signal(name, &mut state.signals, &mut state.inputs);
             Some((sig_ref, extract_nums::<u8>(val).next()?))
-        })
-        .collect_vec()
-        .into_iter()
-        .for_each(|(sig_ref, val)| state.signals[sig_ref].val = val);
+        })() {
+            state.signals[sig_ref].val = val;
+        }
+    });
 
     let idx_cache = IDX_CACHE.lock().unwrap().clone();
     state.set_size(idx_cache.len());
