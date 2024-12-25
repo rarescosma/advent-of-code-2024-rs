@@ -39,6 +39,11 @@ lazy_static! {
 type Gates = [Gate; MAX_NODES];
 type Signals = [Signal; MAX_NODES];
 type SigRef = usize;
+type GateKind = u8;
+
+const OR: GateKind = 1;
+const AND: GateKind = 2;
+const XOR: GateKind = 3;
 
 struct State {
     gates: Gates,
@@ -59,9 +64,41 @@ impl Default for State {
 }
 
 impl State {
-    fn zero_signals(&mut self) { self.signals.iter_mut().for_each(|s| s.val = 0); }
+    fn register_signal(&mut self, sig: &str) -> SigRef {
+        let (sig_ref, signal) = Signal::parse(sig);
+        if signal.is_input {
+            let mut idx = extract_nums::<usize>(sig).next().expect("valid identifier");
+            if sig.starts_with("y") {
+                idx += MAX_BITS as usize;
+            }
+            self.inputs[idx] = sig_ref;
+        }
+        self.signals[sig_ref] = signal;
+        sig_ref
+    }
 
     fn set_size(&mut self, size: usize) { self.size = size; }
+
+    fn run(&mut self, x: u64, y: u64) -> Option<()> {
+        self.zero_signals();
+
+        let mut fill = |mut val: u64, offset: usize| {
+            let mut bit_pos = 0;
+            while val > 0 {
+                let idx = self.inputs[bit_pos + offset];
+                self.signals[idx].val = (val & 1) as u8;
+                val >>= 1;
+                bit_pos += 1;
+            }
+        };
+
+        fill(x, 0);
+        fill(y, MAX_BITS as _);
+
+        self.evaluate()
+    }
+
+    fn zero_signals(&mut self) { self.signals.iter_mut().for_each(|s| s.val = 0); }
 
     fn evaluate(&mut self) -> Option<()> {
         fn inner(
@@ -91,7 +128,7 @@ impl State {
             let left = collapse(gate.left)?;
             let right = collapse(gate.right)?;
 
-            let ret = gate.kind.eval(left, right);
+            let ret = gate.eval(left, right);
             cache[out_ref] = ret;
             Some(ret)
         }
@@ -104,6 +141,12 @@ impl State {
         }
         Some(())
     }
+
+    fn swap(&mut self, a: SigRef, b: SigRef) {
+        let (l, r) = (self.gates[a], self.gates[b]);
+        self.gates[a].splat(r);
+        self.gates[b].splat(l);
+    }
 }
 
 #[derive(Copy, Clone, Debug, Default)]
@@ -114,38 +157,11 @@ struct Signal {
 }
 
 impl Signal {
-    fn from_str(name: &str) -> (SigRef, Self) {
+    fn parse(name: &str) -> (SigRef, Self) {
         let is_input = name.starts_with("x") || name.starts_with("y");
         let is_output = name.starts_with("z");
         let sig_ref = idx(name.to_owned());
         (sig_ref, Self { is_input, is_output, val: 0 })
-    }
-}
-
-#[derive(Copy, Clone, Debug, Default)]
-enum GateKind {
-    #[default]
-    Or,
-    And,
-    Xor,
-}
-
-impl GateKind {
-    fn parse(from: &str) -> Self {
-        match from {
-            "OR" => Self::Or,
-            "AND" => Self::And,
-            "XOR" => Self::Xor,
-            _ => panic!(),
-        }
-    }
-
-    fn eval(&self, left: u8, right: u8) -> u8 {
-        match self {
-            GateKind::Or => left | right,
-            GateKind::And => left & right,
-            GateKind::Xor => left ^ right,
-        }
     }
 }
 
@@ -157,10 +173,28 @@ struct Gate {
 }
 
 impl Gate {
+    fn parse_kind(from: &str) -> GateKind {
+        match from {
+            "OR" => OR,
+            "AND" => AND,
+            "XOR" => XOR,
+            _ => panic!(),
+        }
+    }
+
     fn splat(&mut self, other: Gate) {
         self.left = other.left;
         self.right = other.right;
         self.kind = other.kind;
+    }
+
+    fn eval(&self, left: u8, right: u8) -> u8 {
+        match self.kind {
+            OR => left | right,
+            AND => left & right,
+            XOR => left ^ right,
+            _ => panic!(),
+        }
     }
 }
 
@@ -172,18 +206,18 @@ fn solve() -> Option<(u64, String)> {
     for line in gates.lines() {
         let mut parts = line.split_ascii_whitespace();
 
-        let left = register_signal(parts.next()?, &mut state);
-        let kind = GateKind::parse(parts.next()?);
-        let right = register_signal(parts.next()?, &mut state);
+        let left = state.register_signal(parts.next()?);
+        let kind = Gate::parse_kind(parts.next()?);
+        let right = state.register_signal(parts.next()?);
         let _ = parts.next()?;
-        let out_ref = register_signal(parts.next()?, &mut state);
+        let out_ref = state.register_signal(parts.next()?);
 
         state.gates[out_ref] = Gate { left, right, kind };
     }
 
     for line in inputs.lines() {
         let (name, val) = line.split_once(": ")?;
-        let sig_ref = register_signal(name, &mut state);
+        let sig_ref = state.register_signal(name);
 
         state.signals[sig_ref].val = extract_nums::<u8>(val).next()?;
     }
@@ -202,13 +236,11 @@ fn solve() -> Option<(u64, String)> {
         p1 = (p1 << 1) | (state.signals[sig_ref].val as u64);
     }
 
-    let mut p2 = Vec::new();
-    for bit_pos in 0..MAX_BITS {
-        if let Some(swap) = fix_bit(bit_pos, &mut state) {
-            p2.push(&rev_idx[&swap[0]]);
-            p2.push(&rev_idx[&swap[1]]);
-        }
-    }
+    let mut p2 = (0..MAX_BITS)
+        .filter_map(|bit_pos| fix_bit(bit_pos, &mut state))
+        .flatten()
+        .map(|swap| &rev_idx[&swap])
+        .collect_vec();
     p2.sort_unstable();
 
     Some((p1, p2.into_iter().join(",")))
@@ -224,18 +256,18 @@ fn fix_bit(bit_pos: i8, state: &mut State) -> Option<[SigRef; 2]> {
     let output_id = make_id("z", bit_pos);
 
     if let Some(node_id) = matching_nodes.into_iter().next() {
-        swap(state, output_id, node_id);
+        state.swap(output_id, node_id);
         debug_assert!(matches!(mini_test(bit_pos, state), Some((true, _))));
         return Some([output_id, node_id]);
     } else {
         let bf_nodes = bf_cands(make_id("z", bit_pos + 1), state);
         for i in 0..bf_nodes.len() - 1 {
             for j in i + 1..bf_nodes.len() {
-                swap(state, bf_nodes[i], bf_nodes[j]);
+                state.swap(bf_nodes[i], bf_nodes[j]);
                 if (-1..=1).all(|off| mini_test(bit_pos + off, state).is_some_and(|(ok, _)| ok)) {
                     return Some([bf_nodes[i], bf_nodes[j]]);
                 }
-                swap(state, bf_nodes[i], bf_nodes[j]);
+                state.swap(bf_nodes[i], bf_nodes[j]);
             }
         }
     }
@@ -251,7 +283,7 @@ fn mini_test(bit_pos: i8, state: &mut State) -> Option<(bool, HashSet<SigRef>)> 
         let x = x << (bit_pos - 1).max(0);
         for y in 0..4 {
             let y = y << (bit_pos - 1).max(0);
-            run(x, y, state)?;
+            state.run(x, y)?;
             truth_tables.iter_mut().enumerate().take(state.size).for_each(|(sig_ref, table)| {
                 let sig = state.signals[sig_ref];
                 if !sig.is_input {
@@ -281,25 +313,6 @@ fn mini_test(bit_pos: i8, state: &mut State) -> Option<(bool, HashSet<SigRef>)> 
     Some((ok, matching_nodes))
 }
 
-fn run(x: u64, y: u64, state: &mut State) -> Option<()> {
-    state.zero_signals();
-
-    let mut fill = |mut val: u64, offset: usize| {
-        let mut bit_pos = 0;
-        while val > 0 {
-            let idx = state.inputs[bit_pos + offset];
-            state.signals[idx].val = (val & 1) as u8;
-            val >>= 1;
-            bit_pos += 1;
-        }
-    };
-
-    fill(x, 0);
-    fill(y, MAX_BITS as _);
-
-    state.evaluate()
-}
-
 fn bf_cands(start_node: SigRef, state: &State) -> Vec<SigRef> {
     let mut q = VecDeque::from([(0, start_node)]);
 
@@ -327,25 +340,6 @@ fn idx(node: String) -> SigRef {
             id
         }
     }
-}
-
-fn register_signal(sig: &str, state: &mut State) -> SigRef {
-    let (sig_ref, signal) = Signal::from_str(sig);
-    if signal.is_input {
-        let mut idx = extract_nums::<usize>(sig).next().expect("valid identifier");
-        if sig.starts_with("y") {
-            idx += MAX_BITS as usize;
-        }
-        state.inputs[idx] = sig_ref;
-    }
-    state.signals[sig_ref] = signal;
-    sig_ref
-}
-
-fn swap(state: &mut State, a: SigRef, b: SigRef) {
-    let (l, r) = (state.gates[a], state.gates[b]);
-    state.gates[a].splat(r);
-    state.gates[b].splat(l);
 }
 
 fn make_id<I: PrimInt + Display>(prefix: &str, bit_pos: I) -> SigRef {
