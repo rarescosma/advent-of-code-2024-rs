@@ -1,4 +1,6 @@
-use std::str::FromStr;
+use std::{hash::Hash, str::FromStr};
+
+use aoc_prelude::HashMap;
 
 /// Macro for solution timing
 /// Credits: <https://github.com/AxlLind>/
@@ -23,4 +25,8 @@ macro_rules! main {
 #[inline]
 pub fn extract_nums<'a, T: FromStr + 'a>(s: &'a str) -> impl Iterator<Item = T> + 'a {
     s.split(|c: char| !c.is_ascii_digit()).filter(|s| !s.is_empty()).flat_map(str::parse::<T>)
+}
+
+pub fn reverse<K, V: Eq + Hash>(h: HashMap<K, V>) -> HashMap<V, K> {
+    h.into_iter().map(|(k, v)| (v, k)).collect()
 }

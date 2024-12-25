@@ -2,12 +2,10 @@
 //!
 //! Brute force is still a thing.
 
-use std::{
-    hash::Hash,
-    sync::atomic::{AtomicUsize, Ordering},
-};
+use std::sync::atomic::{AtomicUsize, Ordering};
 
 use aoc_prelude::{lazy_static, Entry, HashMap, HashSet, Itertools};
+use aoc_2024::reverse;
 
 const MAX_NODES: usize = 26 * 26;
 
@@ -73,10 +71,6 @@ fn idx<'a>(node: &'a str, cache: &mut HashMap<&'a str, usize>) -> usize {
             idx
         }
     }
-}
-
-fn reverse<K, V: Eq + Hash>(h: HashMap<K, V>) -> HashMap<V, K> {
-    h.into_iter().map(|(k, v)| (v, k)).collect()
 }
 
 fn count_triples(graph: &Graph, tee_nodes: &HashSet<usize>) -> usize {
