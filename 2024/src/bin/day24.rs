@@ -1,8 +1,16 @@
 //! # Crossed Wires
 //!
-//! Still gotta come up with a generic solution for Part 2.
+//!  Finally settled on a generic solution for Part 2 that I'm happy with:
 //!
-//! But it's Christmas so visual inspection will have to do for now.
+//!   - Doesn't make any assumptions about the structure of the adders.
+//!   - Uses truth tables to find swap candidates: when checking a particular bit position we cycle
+//!     through all relevant values for x, y in `bit_pos` and `bit_pos - 1` (to account for carry)
+//!     and compare the output truth table with the expected one.
+//!     If not matching, but we've got other nodes in the  circuit that do match,
+//!     we attempt to swap the output with them.
+//!   - Mini brute-force when the above heuristic fails - we only take nodes that are locally close
+//!     to the issue and account for cycles + check if we haven't disturbed the truth tables
+//!     for `bit_pos - 1` and `bit_pos + 1` just to be sure.
 
 use std::{
     collections::VecDeque,
@@ -28,21 +36,21 @@ lazy_static! {
     static ref IDX_CACHE: Mutex<HashMap<String, SigRef>> = Mutex::new(HashMap::new());
 }
 
-type Circuit = [Gate; MAX_NODES];
+type Gates = [Gate; MAX_NODES];
 type Signals = [Signal; MAX_NODES];
 type SigRef = usize;
 
 struct State {
-    circuit: Circuit,
+    gates: Gates,
     signals: Signals,
     inputs: [SigRef; MAX_NODES],
-    size: usize,
+    size: SigRef,
 }
 
 impl Default for State {
     fn default() -> Self {
         Self {
-            circuit: [Gate::default(); MAX_NODES],
+            gates: [Gate::default(); MAX_NODES],
             signals: [Signal::default(); MAX_NODES],
             inputs: [usize::MAX; MAX_NODES],
             size: 0,
@@ -58,44 +66,42 @@ impl State {
     fn evaluate(&mut self) -> Option<()> {
         fn inner(
             this: &mut State,
-            node: SigRef,
+            out_ref: SigRef,
             seen: [bool; MAX_NODES],
             cache: &mut [u8],
         ) -> Option<u8> {
-            if cache[node] != u8::MAX {
-                return Some(cache[node]);
+            if cache[out_ref] != u8::MAX {
+                return Some(cache[out_ref]);
             }
 
-            let gate = this.circuit[node];
-            if seen[gate.in0] || seen[gate.in1] {
+            let gate = this.gates[out_ref];
+
+            // This indicates a cycle, we propagate the condition through the use of Option
+            if seen[gate.left] || seen[gate.right] {
                 return None;
             }
 
-            let left = if this.signals[gate.in0].is_input {
-                this.signals[gate.in0].val
-            } else {
-                let mut new_seen = seen;
-                new_seen[gate.in0] = true;
-                inner(this, gate.in0, new_seen, cache)?
+            let mut collapse = |sig_ref: SigRef| {
+                if this.signals[sig_ref].is_input {
+                    Some(this.signals[sig_ref].val)
+                } else {
+                    let mut new_seen = seen;
+                    new_seen[sig_ref] = true;
+                    inner(this, sig_ref, new_seen, cache)
+                }
             };
-
-            let right = if this.signals[gate.in1].is_input {
-                this.signals[gate.in1].val
-            } else {
-                let mut new_seen = seen;
-                new_seen[gate.in1] = true;
-                inner(this, gate.in1, new_seen, cache)?
-            };
+            let left = collapse(gate.left)?;
+            let right = collapse(gate.right)?;
 
             let ret = gate.kind.eval(left, right);
-            cache[node] = ret;
+            cache[out_ref] = ret;
             Some(ret)
         }
 
         let mut cache = [u8::MAX; MAX_NODES];
-        for n_ref in 0..self.size {
-            if !self.signals[n_ref].is_input {
-                self.signals[n_ref].val = inner(self, n_ref, [false; MAX_NODES], &mut cache)?;
+        for out_ref in 0..self.size {
+            if !self.signals[out_ref].is_input {
+                self.signals[out_ref].val = inner(self, out_ref, [false; MAX_NODES], &mut cache)?;
             }
         }
         Some(())
@@ -136,26 +142,26 @@ impl GateKind {
         }
     }
 
-    fn eval(&self, in0: u8, in1: u8) -> u8 {
+    fn eval(&self, left: u8, right: u8) -> u8 {
         match self {
-            GateKind::Or => in0 | in1,
-            GateKind::And => in0 & in1,
-            GateKind::Xor => in0 ^ in1,
+            GateKind::Or => left | right,
+            GateKind::And => left & right,
+            GateKind::Xor => left ^ right,
         }
     }
 }
 
 #[derive(Debug, Clone, Copy, Default)]
 struct Gate {
-    in0: SigRef,
-    in1: SigRef,
+    left: SigRef,
+    right: SigRef,
     kind: GateKind,
 }
 
 impl Gate {
     fn splat(&mut self, other: Gate) {
-        self.in0 = other.in0;
-        self.in1 = other.in1;
+        self.left = other.left;
+        self.right = other.right;
         self.kind = other.kind;
     }
 }
@@ -170,16 +176,16 @@ fn solve() -> (u64, String) {
         .filter_map(|line| {
             let mut parts = line.split_ascii_whitespace();
 
-            let in0 = register_signal(parts.next()?, &mut state.signals, &mut state.inputs);
+            let left = register_signal(parts.next()?, &mut state.signals, &mut state.inputs);
             let kind = GateKind::parse(parts.next()?);
-            let in1 = register_signal(parts.next()?, &mut state.signals, &mut state.inputs);
+            let right = register_signal(parts.next()?, &mut state.signals, &mut state.inputs);
             let _ = parts.next()?;
             let out_ref = register_signal(parts.next()?, &mut state.signals, &mut state.inputs);
 
-            Some((out_ref, Gate { in0, in1, kind }))
+            Some((out_ref, Gate { left, right, kind }))
         })
-        .for_each(|(id, gate)| {
-            state.circuit[id] = gate;
+        .for_each(|(out_ref, gate)| {
+            state.gates[out_ref] = gate;
         });
 
     inputs.lines().for_each(|line| {
@@ -194,20 +200,21 @@ fn solve() -> (u64, String) {
 
     let idx_cache = IDX_CACHE.lock().unwrap().clone();
     state.set_size(idx_cache.len());
+    let rev_idx = reverse(idx_cache);
     state.evaluate();
 
-    let rev_idx = reverse(idx_cache);
-
     let mut p1 = 0u64;
-    for k in
-        (0..state.size).filter(|n| state.signals[*n].is_output).sorted_by_key(|n| &rev_idx[n]).rev()
+    for sig_ref in (0..state.size)
+        .filter(|n| state.signals[*n].is_output)
+        .sorted_by_key(|sig_ref| &rev_idx[sig_ref])
+        .rev()
     {
-        p1 = (p1 << 1) | (state.signals[k].val as u64);
+        p1 = (p1 << 1) | (state.signals[sig_ref].val as u64);
     }
 
     let mut p2 = Vec::new();
-    for bit in 0..MAX_BITS {
-        p2.extend(fix_bit(bit, &mut state).into_iter().map(|n| &rev_idx[&n]));
+    for bit_pos in 0..MAX_BITS {
+        p2.extend(fix_bit(bit_pos, &mut state).into_iter().map(|sig_ref| &rev_idx[&sig_ref]));
     }
     p2.sort_unstable();
 
@@ -309,9 +316,9 @@ fn bf_cands(start_node: SigRef, state: &State) -> Vec<SigRef> {
         let sig = state.signals[sig_ref];
         if depth < BF_MAX_DEPTH && !sig.is_input {
             ret.push(sig_ref);
-            let gate = state.circuit[sig_ref];
-            q.push_back((depth + 1, gate.in0));
-            q.push_back((depth + 1, gate.in1));
+            let gate = state.gates[sig_ref];
+            q.push_back((depth + 1, gate.left));
+            q.push_back((depth + 1, gate.right));
         }
     }
     ret
@@ -330,22 +337,22 @@ fn idx(node: String) -> SigRef {
 }
 
 fn register_signal(sig: &str, signals: &mut Signals, inputs: &mut [SigRef; MAX_NODES]) -> SigRef {
-    let (ref0, in0) = Signal::from_str(sig);
-    if in0.is_input {
+    let (sig_ref, signal) = Signal::from_str(sig);
+    if signal.is_input {
         let mut idx = extract_nums::<usize>(sig).next().unwrap();
         if sig.starts_with("y") {
             idx += MAX_BITS as usize;
         }
-        inputs[idx] = ref0;
+        inputs[idx] = sig_ref;
     }
-    signals[ref0] = in0;
-    ref0
+    signals[sig_ref] = signal;
+    sig_ref
 }
 
 fn swap(state: &mut State, a: SigRef, b: SigRef) {
-    let (l, r) = (state.circuit[a], state.circuit[b]);
-    state.circuit[a].splat(r);
-    state.circuit[b].splat(l);
+    let (l, r) = (state.gates[a], state.gates[b]);
+    state.gates[a].splat(r);
+    state.gates[b].splat(l);
 }
 
 fn make_id<I: PrimInt + Display>(prefix: &str, bit_pos: I) -> SigRef {
