@@ -1,3 +1,4 @@
+import os
 from collections import defaultdict
 from typing import NamedTuple
 
@@ -28,7 +29,7 @@ FULL_ADDER_TT = [0, 0, 1, 1, 0, 1, 1, 0, 1, 1, 0, 0, 1, 0, 0, 1]
 LAST_BIT_TT = [0, 0, 0, 0, 0, 1, 0, 1, 0, 0, 0, 0, 0, 1, 0, 1]
 MAX_BITS = 45
 BF_MAX_DEPTH = 6
-DEBUG = True
+DEBUG = bool(os.getenv("DEBUG", False))
 
 
 class CycleError(RuntimeError):
