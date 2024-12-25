@@ -1,4 +1,4 @@
-use std::{hash::Hash, str::FromStr};
+use std::{hash::Hash, ops::BitOr, str::FromStr};
 
 use aoc_prelude::{num_integer::Integer, HashMap};
 
@@ -51,6 +51,15 @@ impl<const N: usize> BitSet<N> {
         let (shard, shift) = index.div_rem(&128);
         let word = &mut self.inner[shard];
         *word |= 1 << shift
+    }
+}
+
+impl<const N: usize> BitOr<usize> for BitSet<N> {
+    type Output = Self;
+
+    fn bitor(mut self, rhs: usize) -> Self::Output {
+        self.set(rhs);
+        self
     }
 }
 

@@ -1,23 +1,23 @@
 //! # Crossed Wires
 //!
-//!  Finally settled on a generic solution for Part 2 that I'm happy with:
+//! Finally settled on a generic solution for Part 2 that I'm happy with:
 //!
-//!   - Doesn't make any assumptions about the structure of the adders.
-//!   - Uses truth tables to find swap candidates: when checking a particular bit position we cycle
-//!     through all relevant values for x, y in `bit_pos` and `bit_pos - 1` (to account for carry)
-//!     and compare the output truth table with the expected one.
-//!     If not matching, but we've got other nodes in the  circuit that do match,
-//!     we attempt to swap the output with them.
-//!   - Mini brute-force when the above heuristic fails - we only take nodes that are locally close
-//!     to the issue and account for cycles + check if we haven't disturbed the truth tables
-//!     for `bit_pos - 1` and `bit_pos + 1` just to be sure.
+//! - Doesn't make any assumptions about the structure of the adders.
+//! - Uses truth tables to find swap candidates: when checking a particular bit position we cycle
+//!   through all relevant values for x, y in `bit_pos` and `bit_pos - 1` (to account for carry)
+//!   and compare the output truth table with the expected one.
+//!   If not matching, but we've got other nodes in the  circuit that do match,
+//!   we attempt to swap the output with them.
+//! - Mini brute-force when the above heuristic fails - we only take nodes that are locally close
+//!   to the issue and account for cycles + check if we haven't disturbed the truth tables
+//!   for `bit_pos - 1` and `bit_pos + 1` just to be sure.
 
 use std::{
     collections::VecDeque,
     fmt::Display,
     sync::{
         atomic::{AtomicUsize, Ordering},
-        Mutex,
+        RwLock,
     },
 };
 
@@ -27,13 +27,13 @@ use aoc_prelude::{lazy_static, Entry, HashMap, HashSet, Itertools, PrimInt};
 const MAX_BITS: i8 = 45;
 const MAX_NODES: usize = 400;
 const BF_MAX_DEPTH: usize = 6;
-const HALF_ADDER_TT: [u8; 16] = [0, 1, 0, 1, 1, 0, 1, 0, 0, 1, 0, 1, 1, 0, 1, 0];
-const FULL_ADDER_TT: [u8; 16] = [0, 0, 1, 1, 0, 1, 1, 0, 1, 1, 0, 0, 1, 0, 0, 1];
-const LAST_BIT_TT: [u8; 16] = [0, 0, 0, 0, 0, 1, 0, 1, 0, 0, 0, 0, 0, 1, 0, 1];
+const HALF_ADDER: [u8; 16] = [0, 1, 0, 1, 1, 0, 1, 0, 0, 1, 0, 1, 1, 0, 1, 0];
+const FULL_ADDER: [u8; 16] = [0, 0, 1, 1, 0, 1, 1, 0, 1, 1, 0, 0, 1, 0, 0, 1];
+const LAST_CARRY: [u8; 16] = [0, 0, 0, 0, 0, 1, 0, 1, 0, 0, 0, 0, 0, 1, 0, 1];
 
 lazy_static! {
     static ref COUNTER: AtomicUsize = AtomicUsize::new(0);
-    static ref IDX_CACHE: Mutex<HashMap<String, SigRef>> = Mutex::new(HashMap::new());
+    static ref IDX_CACHE: RwLock<HashMap<String, SigRef>> = RwLock::new(HashMap::new());
 }
 
 type Gates = [Gate; MAX_NODES];
@@ -67,7 +67,7 @@ impl State {
         fn inner(
             this: &mut State,
             out_ref: SigRef,
-            seen: BitSet<{ MAX_NODES / 128 + 1 }>,
+            seen: BitSet<{ MAX_NODES.div_ceil(128) }>,
             cache: &mut [u8],
         ) -> Option<u8> {
             if cache[out_ref] != u8::MAX {
@@ -82,12 +82,10 @@ impl State {
             }
 
             let mut collapse = |sig_ref: SigRef| {
-                if this.signals[sig_ref].is_input {
-                    Some(this.signals[sig_ref].val)
-                } else {
-                    let mut new_seen = seen;
-                    new_seen.set(sig_ref);
-                    inner(this, sig_ref, new_seen, cache)
+                let sig = this.signals[sig_ref];
+                match sig.is_input {
+                    true => Some(sig.val),
+                    false => inner(this, sig_ref, seen | sig_ref, cache),
                 }
             };
             let left = collapse(gate.left)?;
@@ -166,39 +164,31 @@ impl Gate {
     }
 }
 
-fn solve() -> (u64, String) {
-    let (inputs, gates) = include_str!("../../inputs/24.in").split_once("\n\n").unwrap();
+fn solve() -> Option<(u64, String)> {
+    let (inputs, gates) = include_str!("../../inputs/24.in").split_once("\n\n")?;
 
     let mut state = State::default();
 
-    gates
-        .lines()
-        .filter_map(|line| {
-            let mut parts = line.split_ascii_whitespace();
+    for line in gates.lines() {
+        let mut parts = line.split_ascii_whitespace();
 
-            let left = register_signal(parts.next()?, &mut state.signals, &mut state.inputs);
-            let kind = GateKind::parse(parts.next()?);
-            let right = register_signal(parts.next()?, &mut state.signals, &mut state.inputs);
-            let _ = parts.next()?;
-            let out_ref = register_signal(parts.next()?, &mut state.signals, &mut state.inputs);
+        let left = register_signal(parts.next()?, &mut state);
+        let kind = GateKind::parse(parts.next()?);
+        let right = register_signal(parts.next()?, &mut state);
+        let _ = parts.next()?;
+        let out_ref = register_signal(parts.next()?, &mut state);
 
-            Some((out_ref, Gate { left, right, kind }))
-        })
-        .for_each(|(out_ref, gate)| {
-            state.gates[out_ref] = gate;
-        });
+        state.gates[out_ref] = Gate { left, right, kind };
+    }
 
-    inputs.lines().for_each(|line| {
-        if let Some((sig_ref, val)) = (|| {
-            let (name, val) = line.split_once(": ")?;
-            let sig_ref = register_signal(name, &mut state.signals, &mut state.inputs);
-            Some((sig_ref, extract_nums::<u8>(val).next()?))
-        })() {
-            state.signals[sig_ref].val = val;
-        }
-    });
+    for line in inputs.lines() {
+        let (name, val) = line.split_once(": ")?;
+        let sig_ref = register_signal(name, &mut state);
 
-    let idx_cache = IDX_CACHE.lock().unwrap().clone();
+        state.signals[sig_ref].val = extract_nums::<u8>(val).next()?;
+    }
+
+    let idx_cache = IDX_CACHE.read().unwrap().clone();
     state.set_size(idx_cache.len());
     let rev_idx = reverse(idx_cache);
     state.evaluate();
@@ -214,39 +204,42 @@ fn solve() -> (u64, String) {
 
     let mut p2 = Vec::new();
     for bit_pos in 0..MAX_BITS {
-        p2.extend(fix_bit(bit_pos, &mut state).into_iter().map(|sig_ref| &rev_idx[&sig_ref]));
+        if let Some(swap) = fix_bit(bit_pos, &mut state) {
+            p2.push(&rev_idx[&swap[0]]);
+            p2.push(&rev_idx[&swap[1]]);
+        }
     }
     p2.sort_unstable();
 
-    (p1, p2.into_iter().join(","))
+    Some((p1, p2.into_iter().join(",")))
 }
 
-fn fix_bit(bit_pos: i8, state: &mut State) -> Vec<SigRef> {
-    let (ok, matching_nodes) = mini_test(bit_pos, state).unwrap();
+fn fix_bit(bit_pos: i8, state: &mut State) -> Option<[SigRef; 2]> {
+    let (ok, matching_nodes) = mini_test(bit_pos, state).expect("no cycles");
 
     if ok {
-        return Vec::new();
+        return None;
     }
 
     let output_id = make_id("z", bit_pos);
 
     if let Some(node_id) = matching_nodes.into_iter().next() {
         swap(state, output_id, node_id);
-        assert!(matches!(mini_test(bit_pos, state), Some((true, _))));
-        return vec![output_id, node_id];
+        debug_assert!(matches!(mini_test(bit_pos, state), Some((true, _))));
+        return Some([output_id, node_id]);
     } else {
         let bf_nodes = bf_cands(make_id("z", bit_pos + 1), state);
         for i in 0..bf_nodes.len() - 1 {
             for j in i + 1..bf_nodes.len() {
                 swap(state, bf_nodes[i], bf_nodes[j]);
-                if (-1..=1).all(|off| mini_test(bit_pos + off, state).is_some_and(|r| r.0)) {
-                    return vec![bf_nodes[i], bf_nodes[j]];
+                if (-1..=1).all(|off| mini_test(bit_pos + off, state).is_some_and(|(ok, _)| ok)) {
+                    return Some([bf_nodes[i], bf_nodes[j]]);
                 }
                 swap(state, bf_nodes[i], bf_nodes[j]);
             }
         }
     }
-    Vec::new()
+    None
 }
 
 fn mini_test(bit_pos: i8, state: &mut State) -> Option<(bool, HashSet<SigRef>)> {
@@ -270,9 +263,9 @@ fn mini_test(bit_pos: i8, state: &mut State) -> Option<(bool, HashSet<SigRef>)> 
     }
 
     let check_table = match bit_pos {
-        0 => HALF_ADDER_TT,
-        MAX_BITS => LAST_BIT_TT,
-        _ => FULL_ADDER_TT,
+        0 => HALF_ADDER,
+        MAX_BITS => LAST_CARRY,
+        _ => FULL_ADDER,
     };
 
     let mut matching_nodes: HashSet<SigRef> = truth_tables
@@ -283,7 +276,7 @@ fn mini_test(bit_pos: i8, state: &mut State) -> Option<(bool, HashSet<SigRef>)> 
         .collect();
 
     let ok = matching_nodes.contains(&make_id("z", bit_pos));
-    matching_nodes.retain(|n| !state.signals[*n].is_output);
+    matching_nodes.retain(|&n| !state.signals[n].is_output);
 
     Some((ok, matching_nodes))
 }
@@ -291,18 +284,18 @@ fn mini_test(bit_pos: i8, state: &mut State) -> Option<(bool, HashSet<SigRef>)> 
 fn run(x: u64, y: u64, state: &mut State) -> Option<()> {
     state.zero_signals();
 
-    fn fill(is_y: bool, mut val: u64, signals: &mut Signals, inputs: &mut [SigRef; MAX_NODES]) {
+    let mut fill = |mut val: u64, offset: usize| {
         let mut bit_pos = 0;
         while val > 0 {
-            let idx = if is_y { inputs[bit_pos + (MAX_BITS as usize)] } else { inputs[bit_pos] };
-            signals[idx].val = (val & 1) as u8;
+            let idx = state.inputs[bit_pos + offset];
+            state.signals[idx].val = (val & 1) as u8;
             val >>= 1;
             bit_pos += 1;
         }
-    }
+    };
 
-    fill(false, x, &mut state.signals, &mut state.inputs);
-    fill(true, y, &mut state.signals, &mut state.inputs);
+    fill(x, 0);
+    fill(y, MAX_BITS as _);
 
     state.evaluate()
 }
@@ -325,7 +318,7 @@ fn bf_cands(start_node: SigRef, state: &State) -> Vec<SigRef> {
 }
 
 fn idx(node: String) -> SigRef {
-    let mut cache = IDX_CACHE.lock().unwrap();
+    let mut cache = IDX_CACHE.write().unwrap();
     match cache.entry(node) {
         Entry::Occupied(idx) => *idx.get(),
         Entry::Vacant(entry) => {
@@ -336,16 +329,16 @@ fn idx(node: String) -> SigRef {
     }
 }
 
-fn register_signal(sig: &str, signals: &mut Signals, inputs: &mut [SigRef; MAX_NODES]) -> SigRef {
+fn register_signal(sig: &str, state: &mut State) -> SigRef {
     let (sig_ref, signal) = Signal::from_str(sig);
     if signal.is_input {
-        let mut idx = extract_nums::<usize>(sig).next().unwrap();
+        let mut idx = extract_nums::<usize>(sig).next().expect("valid identifier");
         if sig.starts_with("y") {
             idx += MAX_BITS as usize;
         }
-        inputs[idx] = sig_ref;
+        state.inputs[idx] = sig_ref;
     }
-    signals[sig_ref] = signal;
+    state.signals[sig_ref] = signal;
     sig_ref
 }
 
@@ -360,5 +353,5 @@ fn make_id<I: PrimInt + Display>(prefix: &str, bit_pos: I) -> SigRef {
 }
 
 aoc_2024::main! {
-    solve()
+    solve().unwrap()
 }
