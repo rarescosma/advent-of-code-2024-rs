@@ -1,6 +1,28 @@
 from collections import defaultdict
 from typing import NamedTuple
 
+"""
+X0 is iterated first in the outer loop (changes every 4 iterations)
+Y0 is iterated first in the inner loop (changes every iteration)
+
+x0 0 0 0 0 1 1 1 1 0 0 0 0 1 1 1 1
+y0 0 1 0 1 0 1 0 1 0 1 0 1 0 1 0 1
+
+Together they produce the carry bit for the upstream adder.
+
+c0 0 0 0 0 0 1 0 1 0 0 0 0 0 1 0 1
+
+X0 is iterated 2nd in the outer loop (changes every 8 iterations)
+Y0 is iterated 2nd in the inner loop (changes every 2nd iteration)
+
+Together with the carry bit (c0) they produce the truth table
+for the downstream adder output.
+
+x1 0 0 0 0 0 0 0 0 1 1 1 1 1 1 1 1
+y1 0 0 1 1 0 0 1 1 0 0 1 1 0 0 1 1
+
+z1 0 0 1 1 0 1 1 0 1 1 0 0 1 0 0 1
+"""
 HALF_ADDER_TT = [0, 1, 0, 1, 1, 0, 1, 0, 0, 1, 0, 1, 1, 0, 1, 0]
 FULL_ADDER_TT = [0, 0, 1, 1, 0, 1, 1, 0, 1, 1, 0, 0, 1, 0, 0, 1]
 LAST_BIT_TT = [0, 0, 0, 0, 0, 1, 0, 1, 0, 0, 0, 0, 0, 1, 0, 1]
