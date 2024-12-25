@@ -21,7 +21,7 @@ use std::{
     },
 };
 
-use aoc_2024::{extract_nums, reverse};
+use aoc_2024::{extract_nums, reverse, BitSet};
 use aoc_prelude::{lazy_static, Entry, HashMap, HashSet, Itertools, PrimInt};
 
 const MAX_BITS: i8 = 45;
@@ -67,7 +67,7 @@ impl State {
         fn inner(
             this: &mut State,
             out_ref: SigRef,
-            seen: [bool; MAX_NODES],
+            seen: BitSet<{ MAX_NODES / 128 + 1 }>,
             cache: &mut [u8],
         ) -> Option<u8> {
             if cache[out_ref] != u8::MAX {
@@ -77,7 +77,7 @@ impl State {
             let gate = this.gates[out_ref];
 
             // This indicates a cycle, we propagate the condition through the use of Option
-            if seen[gate.left] || seen[gate.right] {
+            if seen.contains(gate.left) || seen.contains(gate.right) {
                 return None;
             }
 
@@ -86,7 +86,7 @@ impl State {
                     Some(this.signals[sig_ref].val)
                 } else {
                     let mut new_seen = seen;
-                    new_seen[sig_ref] = true;
+                    new_seen.set(sig_ref);
                     inner(this, sig_ref, new_seen, cache)
                 }
             };
@@ -101,7 +101,7 @@ impl State {
         let mut cache = [u8::MAX; MAX_NODES];
         for out_ref in 0..self.size {
             if !self.signals[out_ref].is_input {
-                self.signals[out_ref].val = inner(self, out_ref, [false; MAX_NODES], &mut cache)?;
+                self.signals[out_ref].val = inner(self, out_ref, Default::default(), &mut cache)?;
             }
         }
         Some(())
