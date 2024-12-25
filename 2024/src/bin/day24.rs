@@ -14,6 +14,7 @@ use aoc_2024::{extract_nums, reverse};
 use aoc_prelude::{lazy_static, Entry, HashMap, HashSet, Itertools, PrimInt};
 
 const MAX_BITS: i8 = 45;
+const MAX_GATES: usize = 400;
 const BF_MAX_DEPTH: usize = 6;
 const HALF_ADDER_TT: [u8; 16] = [0, 1, 0, 1, 1, 0, 1, 0, 0, 1, 0, 1, 1, 0, 1, 0];
 const FULL_ADDER_TT: [u8; 16] = [0, 0, 1, 1, 0, 1, 1, 0, 1, 1, 0, 0, 1, 0, 0, 1];
@@ -234,10 +235,10 @@ fn evaluate(circuit: &Circuit, signals: &mut Signals) -> Option<()> {
         node: &NodeRef,
         signals: &Signals,
         seen: HashSet<NodeRef>,
-        cache: &mut HashMap<NodeRef, u8>,
+        cache: &mut [u8],
     ) -> Option<u8> {
-        if cache.contains_key(node) {
-            return Some(cache[node]);
+        if cache[node.id] != u8::MAX {
+            return Some(cache[node.id]);
         }
 
         let gate = circuit[node];
@@ -262,11 +263,11 @@ fn evaluate(circuit: &Circuit, signals: &mut Signals) -> Option<()> {
         };
 
         let ret = gate.kind.eval(left, right);
-        cache.insert(*node, ret);
+        cache[node.id] = ret;
         Some(ret)
     }
 
-    let mut cache = HashMap::new();
+    let mut cache = [u8::MAX; MAX_GATES];
     for node in circuit.keys() {
         if !node.is_input {
             signals.insert(*node, inner(circuit, node, signals, HashSet::new(), &mut cache)?);
