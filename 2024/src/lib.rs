@@ -1,6 +1,6 @@
 use std::{hash::Hash, str::FromStr};
 
-use aoc_prelude::HashMap;
+use aoc_prelude::{num_integer::Integer, HashMap};
 
 /// Macro for solution timing
 /// Credits: <https://github.com/AxlLind>/
@@ -29,4 +29,45 @@ pub fn extract_nums<'a, T: FromStr + 'a>(s: &'a str) -> impl Iterator<Item = T> 
 
 pub fn reverse<K, V: Eq + Hash>(h: HashMap<K, V>) -> HashMap<V, K> {
     h.into_iter().map(|(k, v)| (v, k)).collect()
+}
+
+#[derive(Copy, Clone, Debug)]
+pub struct BitSet<const N: usize> {
+    inner: [u128; N],
+}
+
+impl<const N: usize> Default for BitSet<N> {
+    fn default() -> Self { Self { inner: [0u128; N] } }
+}
+
+impl<const N: usize> BitSet<N> {
+    pub fn contains(&self, index: usize) -> bool {
+        let (shard, shift) = index.div_rem(&128);
+        let word = self.inner[shard];
+        (word >> shift) & 1 == 1
+    }
+
+    pub fn set(&mut self, index: usize) {
+        let (shard, shift) = index.div_rem(&128);
+        let word = &mut self.inner[shard];
+        *word |= 1 << shift
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::BitSet;
+
+    #[test]
+    fn test_bitset() {
+        let mut sut = BitSet::<4>::default();
+
+        sut.set(3);
+        assert!(!sut.contains(0));
+        assert!(sut.contains(3));
+
+        sut.set(152);
+        assert!(!sut.contains(313));
+        assert!(sut.contains(152));
+    }
 }
