@@ -143,9 +143,9 @@ impl State {
     }
 
     fn swap(&mut self, a: SigRef, b: SigRef) {
-        let (l, r) = (self.gates[a], self.gates[b]);
-        self.gates[a].splat(r);
-        self.gates[b].splat(l);
+        let (a_gate, b_gate) = (self.gates[a], self.gates[b]);
+        self.gates[a].splat(b_gate);
+        self.gates[b].splat(a_gate);
     }
 }
 
@@ -229,7 +229,7 @@ fn solve() -> Option<(u64, String)> {
 
     let mut p1 = 0u64;
     for sig_ref in (0..state.size)
-        .filter(|n| state.signals[*n].is_output)
+        .filter(|&sig_ref| state.signals[sig_ref].is_output)
         .sorted_by_key(|sig_ref| &rev_idx[sig_ref])
         .rev()
     {
@@ -247,27 +247,27 @@ fn solve() -> Option<(u64, String)> {
 }
 
 fn fix_bit(bit_pos: i8, state: &mut State) -> Option<[SigRef; 2]> {
-    let (ok, matching_nodes) = mini_test(bit_pos, state).expect("no cycles");
+    let (ok, matching_signals) = mini_test(bit_pos, state).expect("no cycles");
 
     if ok {
         return None;
     }
 
-    let output_id = make_id("z", bit_pos);
+    let out_ref = make_id("z", bit_pos);
 
-    if let Some(node_id) = matching_nodes.into_iter().next() {
-        state.swap(output_id, node_id);
+    if let Some(sig_ref) = matching_signals.into_iter().next() {
+        state.swap(out_ref, sig_ref);
         debug_assert!(matches!(mini_test(bit_pos, state), Some((true, _))));
-        return Some([output_id, node_id]);
+        return Some([out_ref, sig_ref]);
     } else {
-        let bf_nodes = bf_cands(make_id("z", bit_pos + 1), state);
-        for i in 0..bf_nodes.len() - 1 {
-            for j in i + 1..bf_nodes.len() {
-                state.swap(bf_nodes[i], bf_nodes[j]);
+        let bf_signals = bf_cands(make_id("z", bit_pos + 1), state);
+        for i in 0..bf_signals.len() - 1 {
+            for j in i + 1..bf_signals.len() {
+                state.swap(bf_signals[i], bf_signals[j]);
                 if (-1..=1).all(|off| mini_test(bit_pos + off, state).is_some_and(|(ok, _)| ok)) {
-                    return Some([bf_nodes[i], bf_nodes[j]]);
+                    return Some([bf_signals[i], bf_signals[j]]);
                 }
-                state.swap(bf_nodes[i], bf_nodes[j]);
+                state.swap(bf_signals[i], bf_signals[j]);
             }
         }
     }
@@ -300,21 +300,21 @@ fn mini_test(bit_pos: i8, state: &mut State) -> Option<(bool, HashSet<SigRef>)> 
         _ => FULL_ADDER,
     };
 
-    let mut matching_nodes: HashSet<SigRef> = truth_tables
+    let mut matching_signals: HashSet<SigRef> = truth_tables
         .iter()
         .enumerate()
-        .filter(|&(_, tt)| tt == &check_table)
-        .map(|(n, _)| n)
+        .filter(|&(_, table)| table == &check_table)
+        .map(|(sig_ref, _)| sig_ref)
         .collect();
 
-    let ok = matching_nodes.contains(&make_id("z", bit_pos));
-    matching_nodes.retain(|&n| !state.signals[n].is_output);
+    let ok = matching_signals.contains(&make_id("z", bit_pos));
+    matching_signals.retain(|&sig_ref| !state.signals[sig_ref].is_output);
 
-    Some((ok, matching_nodes))
+    Some((ok, matching_signals))
 }
 
-fn bf_cands(start_node: SigRef, state: &State) -> Vec<SigRef> {
-    let mut q = VecDeque::from([(0, start_node)]);
+fn bf_cands(start_ref: SigRef, state: &State) -> Vec<SigRef> {
+    let mut q = VecDeque::from([(0, start_ref)]);
 
     let mut ret = Vec::new();
 
@@ -330,9 +330,9 @@ fn bf_cands(start_node: SigRef, state: &State) -> Vec<SigRef> {
     ret
 }
 
-fn idx(node: String) -> SigRef {
+fn idx(name: String) -> SigRef {
     let mut cache = IDX_CACHE.write().unwrap();
-    match cache.entry(node) {
+    match cache.entry(name) {
         Entry::Occupied(idx) => *idx.get(),
         Entry::Vacant(entry) => {
             let id = COUNTER.fetch_add(1, Ordering::Relaxed);
