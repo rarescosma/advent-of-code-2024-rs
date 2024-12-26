@@ -5,31 +5,20 @@
 //!
 //! Happy solstice! 🎄
 
-use std::iter::once;
-
-use aoc_prelude::Itertools;
-
 fn solve() -> (usize, &'static str) {
     let input = include_str!("../../inputs/25.in");
 
     let mut tumblers = Vec::with_capacity(300);
     let mut keys = Vec::with_capacity(300);
 
-    let mut buf = [-1i8; 5];
-
     input.split("\n\n").for_each(|pat| {
-        let mut lines = pat.lines();
-        let first = lines.next().unwrap();
-        let is_tumbler = first.chars().all(|c| c == '#');
+        let mut it = pat.bytes();
+        let mut buf = (it.next().unwrap() & 1) as u64;
+        let is_tumbler = buf == 1;
 
-        buf.fill(-1i8);
-
-        lines.chain(once(first)).for_each(|l| {
-            l.chars().enumerate().for_each(|(idx, c)| {
-                if c == '#' {
-                    buf[idx] += 1;
-                }
-            });
+        it.for_each(|byte| {
+            buf <<= (byte != b'\n') as u64;
+            buf |= (byte & 1) as u64;
         });
 
         if is_tumbler {
@@ -39,11 +28,14 @@ fn solve() -> (usize, &'static str) {
         }
     });
 
-    let p1 = tumblers
-        .iter()
-        .cartesian_product(keys.iter())
-        .filter(|&(t, k)| t.iter().zip(k).all(|(t, k)| t + k <= 5))
-        .count();
+    let mut p1 = 0;
+    for tumbler in &tumblers {
+        for key in &keys {
+            if tumbler & key == 0 {
+                p1 += 1;
+            }
+        }
+    }
 
     (p1, "💚")
 }
