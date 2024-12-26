@@ -14,7 +14,7 @@
 use std::thread::available_parallelism;
 
 use aoc_2dmap::prelude::*;
-use aoc_prelude::{num_integer::Integer, Itertools};
+use aoc_prelude::{HashSet, Itertools};
 use rayon::prelude::*;
 
 type Teleport = Vec<Pos>;
@@ -33,14 +33,16 @@ fn solve() -> (usize, usize) {
     let mut pos = start;
     let mut dir = 0;
 
-    let mut visited = vec![false; (map.size.x * map.size.y) as usize];
+    // let mut visited = vec![false; (map.size.x * map.size.y) as usize];
+    let mut visited = HashSet::new();
     while map.within(pos + ORTHOGONAL[dir]) {
         let new_pos = teleport[key(pos, dir, map.size)];
 
         for x in pos.x.min(new_pos.x)..=new_pos.x.max(pos.x) {
             for y in pos.y.min(new_pos.y)..=new_pos.y.max(pos.y) {
-                if map.within(Pos::new(x, y)) {
-                    visited[(x * map.size.y + y) as usize] = true;
+                let gallivant = Pos::new(x, y);
+                if map.within(gallivant) {
+                    visited.insert(gallivant);
                 }
             }
         }
@@ -49,20 +51,12 @@ fn solve() -> (usize, usize) {
         dir = turn_right(dir);
     }
 
-    let p1 = visited.iter().filter(|&x| *x).count();
+    let p1 = visited.len();
 
-    let obstacles = visited
-        .iter()
-        .enumerate()
-        .filter(|x| *x.1)
-        .map(|(hash, _)| {
-            let (x, y) = hash.div_rem(&(map.size.y as usize));
-            Pos::from((x, y))
-        })
-        .collect_vec();
-
-    let p2 = obstacles
-        .chunks(obstacles.len() / available_parallelism().unwrap().get())
+    let p2 = visited
+        .into_iter()
+        .collect_vec()
+        .chunks(p1 / available_parallelism().unwrap().get())
         .par_bridge()
         .map(|chunk| {
             let mut seen = vec![false; (map.size.x * map.size.y) as usize * 4];
