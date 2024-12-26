@@ -32,18 +32,12 @@ impl Buffers {
 fn solve() -> (usize, usize) {
     let input = include_str!("../../inputs/06.in");
     let map_size = Pos::from((
-        input.chars().position(|x| x == '\n').unwrap(),
-        input.chars().filter(|x| *x == '\n').count(),
+        input.bytes().position(|x| x == b'\n').unwrap(),
+        input.bytes().filter(|x| *x == b'\n').count(),
     ));
-    let mut map = Map::new(map_size, input.chars().filter(|&c| c != '\n'));
+    let mut map = Map::new(map_size, input.bytes().filter(|&c| c != b'\n'));
 
-    let mut start = Pos::default();
-    for pos in map.iter() {
-        if map[pos] == '^' {
-            start = pos;
-            break;
-        }
-    }
+    let start = find_tile(&map, b'^');
 
     let mut buffers = Buffers::allocate(map.size);
     has_cycle(&map, start, &mut buffers);
@@ -54,19 +48,19 @@ fn solve() -> (usize, usize) {
         let (x, y) = hash.div_rem(&(map.size.y as usize));
 
         let cand = Pos::from((x, y));
-        if map.get(cand) == Some('.') {
-            map[cand] = '#';
+        if map.get(cand) == Some(b'.') {
+            map[cand] = b'#';
             if has_cycle(&map, start, &mut buffers) {
                 p2 += 1;
             }
-            map[cand] = 'b';
+            map[cand] = b'b';
         }
     }
 
     (p1, p2)
 }
 
-fn has_cycle(map: &Map<char>, start: Pos, buffers: &mut Buffers) -> bool {
+fn has_cycle(map: &Map<u8>, start: Pos, buffers: &mut Buffers) -> bool {
     let mut cur = start;
     let mut dir = 0;
     buffers.clear();
@@ -79,7 +73,7 @@ fn has_cycle(map: &Map<char>, start: Pos, buffers: &mut Buffers) -> bool {
         }
         let c = map[cur];
         let hash = ((cur.x * map.size.y + cur.y) * 4) as usize + dir;
-        if c == '#' {
+        if c == b'#' {
             // backtrack + turn right
             let opposite = ORTHOGONAL[turn_back(dir)];
             cur += opposite;
@@ -94,6 +88,9 @@ fn has_cycle(map: &Map<char>, start: Pos, buffers: &mut Buffers) -> bool {
         buffers.visited_pos[(cur.x * map.size.y + cur.y) as usize] = true;
     }
 }
+
+#[inline(always)]
+fn find_tile(map: &Map<u8>, tile: u8) -> Pos { map.iter().find(|pos| map[pos] == tile).unwrap() }
 
 #[inline]
 fn turn_right(dir: usize) -> usize { (dir + 1) % 4 }
